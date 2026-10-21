@@ -1,0 +1,30 @@
+# הגדרת השרת ב-Render (Blueprint). מסד הנתונים נמצא ב-Neon, ולכן לא מוגדר כאן.
+# הערכים הסודיים (sync: false) מוזנים ידנית ב-Render ולא נשמרים ב-GitHub.
+services:
+  - type: web
+    name: shared-albums-api
+    runtime: node
+    plan: free
+    # אם השרת נמצא בתיקייה בתוך המאגר, הוסיפו כאן: rootDir: server
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN_SECONDS
+        value: "604800"
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

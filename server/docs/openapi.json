@@ -1,0 +1,1876 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Shared Albums API",
+    "version": "1.0.0",
+    "description": "API לאתר האלבומים השיתופיים.\n\nאיך בודקים: מתחברים ב-POST /api/auth/login, מעתיקים את ה-token מהתשובה, לוחצים Authorize ומדביקים אותו. מכאן כל הקריאות המוגנות נשלחות עם הטוקן.\n\nתפקידים: מנהל אלבום (מי שיצר אותו) ומשתתף (מייל ברשימת המשתתפים). כל ההרשאות נבדקות בשרת."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "השרת הנוכחי"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Health"
+    },
+    {
+      "name": "Auth",
+      "description": "הרשמה והתחברות"
+    },
+    {
+      "name": "Albums",
+      "description": "אלבומים"
+    },
+    {
+      "name": "Photos",
+      "description": "תמונות ולייקים"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "הטוקן שחוזר מ-login או register"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "הודעה בעברית שאפשר להציג למשתמש"
+          }
+        }
+      },
+      "ValidationError": {
+        "type": "object",
+        "required": [
+          "error",
+          "details"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "email"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "required": [
+          "token",
+          "user"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "JWT. שולחים אותו בכותרת Authorization: Bearer <token>"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        }
+      },
+      "RegisterInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "password"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 100
+          }
+        }
+      },
+      "LoginInput": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "AlbumStatus": {
+        "type": "string",
+        "enum": [
+          "open",
+          "locked"
+        ],
+        "description": "open: אפשר להעלות. locked: נעול להעלאות"
+      },
+      "AlbumInput": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000,
+            "default": ""
+          },
+          "eventDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "description": "YYYY-MM-DD, או null"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AlbumStatus"
+          },
+          "memberEmails": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "string",
+              "format": "email"
+            },
+            "default": [],
+            "description": "מיילים של משתתפים. המייל של המנהל וכפילויות מוסרים אוטומטית"
+          }
+        }
+      },
+      "Album": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "eventDate",
+          "status",
+          "ownerId",
+          "ownerName",
+          "role",
+          "photoCount",
+          "coverUrl",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "eventDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/AlbumStatus"
+          },
+          "ownerId": {
+            "type": "integer"
+          },
+          "ownerName": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "member"
+            ],
+            "description": "התפקיד של המשתמש המחובר באלבום"
+          },
+          "photoCount": {
+            "type": "integer"
+          },
+          "coverUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "תמונה ממוזערת של התמונה הראשונה"
+          },
+          "memberEmails": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "מופיע בצפייה באלבום אחד, ביצירה ובעריכה"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AlbumList": {
+        "type": "object",
+        "required": [
+          "owned",
+          "shared"
+        ],
+        "properties": {
+          "owned": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Album"
+            },
+            "description": "אלבומים שפתחתי"
+          },
+          "shared": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Album"
+            },
+            "description": "אלבומים ששותפו איתי"
+          }
+        }
+      },
+      "Photo": {
+        "type": "object",
+        "required": [
+          "id",
+          "albumId",
+          "url",
+          "thumbUrl",
+          "originalName",
+          "uploadedAt",
+          "likeCount",
+          "likedByMe"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "albumId": {
+            "type": "integer"
+          },
+          "url": {
+            "type": "string",
+            "description": "תמונה מלאה, להצגה ולהורדה"
+          },
+          "thumbUrl": {
+            "type": "string",
+            "description": "400x400 לגלריה"
+          },
+          "width": {
+            "type": "integer",
+            "nullable": true
+          },
+          "height": {
+            "type": "integer",
+            "nullable": true
+          },
+          "originalName": {
+            "type": "string"
+          },
+          "uploadedBy": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "uploadedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "likeCount": {
+            "type": "integer"
+          },
+          "likedByMe": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PhotoList": {
+        "type": "object",
+        "required": [
+          "photos"
+        ],
+        "properties": {
+          "photos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Photo"
+            }
+          }
+        }
+      },
+      "UploadResult": {
+        "type": "object",
+        "required": [
+          "uploaded",
+          "skipped",
+          "failed"
+        ],
+        "properties": {
+          "uploaded": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Photo"
+            }
+          },
+          "skipped": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string",
+                  "enum": [
+                    "duplicate"
+                  ]
+                }
+              }
+            }
+          },
+          "failed": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "LikeState": {
+        "type": "object",
+        "required": [
+          "photoId",
+          "likeCount",
+          "likedByMe"
+        ],
+        "properties": {
+          "photoId": {
+            "type": "integer"
+          },
+          "likeCount": {
+            "type": "integer"
+          },
+          "likedByMe": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "בדיקת שרת",
+        "responses": {
+          "200": {
+            "description": "השרת פעיל",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "example": {
+                  "ok": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "הרשמה",
+        "description": "יוצר משתמש ומחזיר טוקן. המייל נשמר באותיות קטנות.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterInput"
+              },
+              "example": {
+                "name": "רחל כהן",
+                "email": "rachel@example.com",
+                "password": "secret123"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "נרשם בהצלחה",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                },
+                "example": {
+                  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                  "user": {
+                    "id": 1,
+                    "name": "רחל כהן",
+                    "email": "rachel.demo@example.com"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "נתונים לא תקינים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                },
+                "example": {
+                  "error": "הנתונים שנשלחו לא תקינים",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "כתובת מייל לא תקינה"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "המייל כבר רשום",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "כבר קיים משתמש עם המייל הזה"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "התחברות",
+        "description": "מחזיר טוקן JWT. העתיקי אותו ולחצי Authorize.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginInput"
+              },
+              "example": {
+                "email": "rachel.demo@example.com",
+                "password": "הסיסמה מ-SEED_PASSWORD"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "התחברות הצליחה",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                },
+                "example": {
+                  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                  "user": {
+                    "id": 1,
+                    "name": "רחל כהן",
+                    "email": "rachel.demo@example.com"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "נתונים לא תקינים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                },
+                "example": {
+                  "error": "הנתונים שנשלחו לא תקינים",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "כתובת מייל לא תקינה"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "מייל או סיסמה שגויים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "מייל או סיסמה שגויים"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "המשתמש המחובר",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "המשתמש לפי הטוקן",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                },
+                "example": {
+                  "user": {
+                    "id": 1,
+                    "name": "רחל כהן",
+                    "email": "rachel.demo@example.com"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "לא מחובר, או שהטוקן לא תקין או שפג תוקפו",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "צריך להתחבר כדי לבצע את הפעולה"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/albums": {
+      "get": {
+        "tags": [
+          "Albums"
+        ],
+        "summary": "האלבומים שלי",
+        "description": "אלבומים שפתחתי ואלבומים ששותפו איתי, מהחדש לישן.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "description": "חיפוש לפי שם האלבום (חלק מהשם, בלי תלות באותיות גדולות)",
+            "example": "בר"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "רשימת האלבומים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlbumList"
+                },
+                "example": {
+                  "owned": [
+                    {
+                      "id": 1,
+                      "name": "בר מצווה של יוסי",
+                      "description": "כל התמונות מהשמחה",
+                      "eventDate": "2026-09-14",
+                      "status": "open",
+                      "ownerId": 1,
+                      "ownerName": "רחל כהן",
+                      "role": "owner",
+                      "photoCount": 4,
+                      "coverUrl": "https://res.cloudinary.com/demo/image/upload/c_fill,g_auto,h_400,w_400/samples/food/dessert",
+                      "memberEmails": [
+                        "sara.demo@example.com"
+                      ],
+                      "createdAt": "2026-10-21T08:00:00.000Z",
+                      "updatedAt": "2026-10-21T08:00:00.000Z"
+                    }
+                  ],
+                  "shared": []
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "נתונים לא תקינים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                },
+                "example": {
+                  "error": "הנתונים שנשלחו לא תקינים",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "כתובת מייל לא תקינה"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "לא מחובר, או שהטוקן לא תקין או שפג תוקפו",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "צריך להתחבר כדי לבצע את הפעולה"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Albums"
+        ],
+        "summary": "יצירת אלבום",
+        "description": "המשתמש המחובר הופך למנהל האלבום.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlbumInput"
+              },
+              "example": {
+                "name": "בר מצווה של יוסי",
+                "description": "כל התמונות מהשמחה",
+                "eventDate": "2026-09-14",
+                "status": "open",
+                "memberEmails": [
+                  "sara.demo@example.com"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "האלבום נוצר",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Album"
+                },
+                "example": {
+                  "id": 1,
+                  "name": "בר מצווה של יוסי",
+                  "description": "כל התמונות מהשמחה",
+                  "eventDate": "2026-09-14",
+                  "status": "open",
+                  "ownerId": 1,
+                  "ownerName": "רחל כהן",
+                  "role": "owner",
+                  "photoCount": 4,
+                  "coverUrl": "https://res.cloudinary.com/demo/image/upload/c_fill,g_auto,h_400,w_400/samples/food/dessert",
+                  "memberEmails": [
+                    "sara.demo@example.com"
+                  ],
+                  "createdAt": "2026-10-21T08:00:00.000Z",
+                  "updatedAt": "2026-10-21T08:00:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "נתונים לא תקינים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                },
+                "example": {
+                  "error": "הנתונים שנשלחו לא תקינים",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "כתובת מייל לא תקינה"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "לא מחובר, או שהטוקן לא תקין או שפג תוקפו",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "צריך להתחבר כדי לבצע את הפעולה"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/albums/{albumId}": {
+      "parameters": [
+        {
+          "name": "albumId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "מזהה האלבום",
+          "example": 1
+        }
+      ],
+      "get": {
+        "tags": [
+          "Albums"
+        ],
+        "summary": "אלבום אחד",
+        "description": "כולל memberEmails ו-role.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "האלבום",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Album"
+                },
+                "example": {
+                  "id": 1,
+                  "name": "בר מצווה של יוסי",
+                  "description": "כל התמונות מהשמחה",
+                  "eventDate": "2026-09-14",
+                  "status": "open",
+                  "ownerId": 1,
+                  "ownerName": "רחל כהן",
+                  "role": "owner",
+                  "photoCount": 4,
+                  "coverUrl": "https://res.cloudinary.com/demo/image/upload/c_fill,g_auto,h_400,w_400/samples/food/dessert",
+                  "memberEmails": [
+                    "sara.demo@example.com"
+                  ],
+                  "createdAt": "2026-10-21T08:00:00.000Z",
+                  "updatedAt": "2026-10-21T08:00:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "נתונים לא תקינים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                },
+                "example": {
+                  "error": "הנתונים שנשלחו לא תקינים",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "כתובת מייל לא תקינה"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "לא מחובר, או שהטוקן לא תקין או שפג תוקפו",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "צריך להתחבר כדי לבצע את הפעולה"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "המשתמש אינו מנהל האלבום ואינו משתתף בו",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "אין לך הרשאה לאלבום הזה"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "האלבום לא נמצא",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "האלבום לא נמצא"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Albums"
+        ],
+        "summary": "עריכת אלבום",
+        "description": "מנהל בלבד. שולחים את כל השדות, כולל status ו-memberEmails. רשימת המשתתפים מוחלפת ברשימה שנשלחה.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlbumInput"
+              },
+              "example": {
+                "name": "בר מצווה של יוסי",
+                "description": "כל התמונות מהשמחה",
+                "eventDate": "2026-09-14",
+                "status": "locked",
+                "memberEmails": [
+                  "sara.demo@example.com"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "האלבום אחרי העריכה",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Album"
+                },
+                "example": {
+                  "id": 1,
+                  "name": "בר מצווה של יוסי",
+                  "description": "כל התמונות מהשמחה",
+                  "eventDate": "2026-09-14",
+                  "status": "locked",
+                  "ownerId": 1,
+                  "ownerName": "רחל כהן",
+                  "role": "owner",
+                  "photoCount": 4,
+                  "coverUrl": "https://res.cloudinary.com/demo/image/upload/c_fill,g_auto,h_400,w_400/samples/food/dessert",
+                  "memberEmails": [
+                    "sara.demo@example.com"
+                  ],
+                  "createdAt": "2026-10-21T08:00:00.000Z",
+                  "updatedAt": "2026-10-21T08:00:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "נתונים לא תקינים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                },
+                "example": {
+                  "error": "הנתונים שנשלחו לא תקינים",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "כתובת מייל לא תקינה"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "לא מחובר, או שהטוקן לא תקין או שפג תוקפו",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "צריך להתחבר כדי לבצע את הפעולה"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "רק מנהל האלבום רשאי",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "רק מנהל האלבום יכול לבצע את הפעולה"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "האלבום לא נמצא",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "האלבום לא נמצא"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Albums"
+        ],
+        "summary": "מחיקת אלבום",
+        "description": "מנהל בלבד. נמחקים גם התמונות, הלייקים והמשתתפים.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "נמחק"
+          },
+          "400": {
+            "description": "נתונים לא תקינים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                },
+                "example": {
+                  "error": "הנתונים שנשלחו לא תקינים",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "כתובת מייל לא תקינה"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "לא מחובר, או שהטוקן לא תקין או שפג תוקפו",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "צריך להתחבר כדי לבצע את הפעולה"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "רק מנהל האלבום רשאי",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "רק מנהל האלבום יכול לבצע את הפעולה"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "האלבום לא נמצא",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "האלבום לא נמצא"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/albums/{albumId}/photos": {
+      "parameters": [
+        {
+          "name": "albumId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "מזהה האלבום",
+          "example": 1
+        }
+      ],
+      "get": {
+        "tags": [
+          "Photos"
+        ],
+        "summary": "תמונות האלבום",
+        "description": "מהחדשה לישנה. עם liked=true: רק תמונות עם לייקים, ממוינות לפי מספר הלייקים.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "liked",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "description": "true = סינון לתמונות עם לייקים"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "התמונות",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhotoList"
+                },
+                "example": {
+                  "photos": [
+                    {
+                      "id": 12,
+                      "albumId": 1,
+                      "url": "https://res.cloudinary.com/demo/image/upload/v1/shared-albums/album-1/abc.jpg",
+                      "thumbUrl": "https://res.cloudinary.com/demo/image/upload/c_fill,g_auto,h_400,w_400/shared-albums/album-1/abc",
+                      "width": 2500,
+                      "height": 1667,
+                      "originalName": "IMG_0012.jpg",
+                      "uploadedBy": {
+                        "id": 2,
+                        "name": "שרה לוי"
+                      },
+                      "uploadedAt": "2026-10-21T09:15:00.000Z",
+                      "likeCount": 3,
+                      "likedByMe": true
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "נתונים לא תקינים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                },
+                "example": {
+                  "error": "הנתונים שנשלחו לא תקינים",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "כתובת מייל לא תקינה"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "לא מחובר, או שהטוקן לא תקין או שפג תוקפו",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "צריך להתחבר כדי לבצע את הפעולה"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "המשתמש אינו מנהל האלבום ואינו משתתף בו",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "אין לך הרשאה לאלבום הזה"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "האלבום לא נמצא",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "האלבום לא נמצא"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Photos"
+        ],
+        "summary": "העלאת תמונות",
+        "description": "משתתף או מנהל, רק כשהאלבום פתוח. עד 30 קבצים, עד 10MB כל אחד. כפולות (לפי SHA-256) מדולגות.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "photos"
+                ],
+                "properties": {
+                  "photos": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "לפחות תמונה אחת נשמרה",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResult"
+                },
+                "example": {
+                  "uploaded": [
+                    {
+                      "id": 12,
+                      "albumId": 1,
+                      "url": "https://res.cloudinary.com/demo/image/upload/v1/shared-albums/album-1/abc.jpg",
+                      "thumbUrl": "https://res.cloudinary.com/demo/image/upload/c_fill,g_auto,h_400,w_400/shared-albums/album-1/abc",
+                      "width": 2500,
+                      "height": 1667,
+                      "originalName": "IMG_0012.jpg",
+                      "uploadedBy": {
+                        "id": 2,
+                        "name": "שרה לוי"
+                      },
+                      "uploadedAt": "2026-10-21T09:15:00.000Z",
+                      "likeCount": 3,
+                      "likedByMe": true
+                    }
+                  ],
+                  "skipped": [
+                    {
+                      "name": "IMG_0013.jpg",
+                      "reason": "duplicate"
+                    }
+                  ],
+                  "failed": []
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "שום תמונה לא נשמרה (כולן כפולות או נכשלו)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResult"
+                },
+                "example": {
+                  "uploaded": [],
+                  "skipped": [
+                    {
+                      "name": "IMG_0012.jpg",
+                      "reason": "duplicate"
+                    }
+                  ],
+                  "failed": []
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "אין קבצים, קובץ שאינו תמונה, או קובץ גדול מדי",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "אפשר להעלות רק קבצי תמונה"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "לא מחובר, או שהטוקן לא תקין או שפג תוקפו",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "צריך להתחבר כדי לבצע את הפעולה"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "אין הרשאה או שהאלבום נעול",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "האלבום נעול להעלאות"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "האלבום לא נמצא",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "האלבום לא נמצא"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/albums/{albumId}/photos/check": {
+      "parameters": [
+        {
+          "name": "albumId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "מזהה האלבום",
+          "example": 1
+        }
+      ],
+      "post": {
+        "tags": [
+          "Photos"
+        ],
+        "summary": "בדיקת כפולות לפני העלאה",
+        "description": "הלקוח מחשב SHA-256 לכל קובץ ושולח את הרשימה. חוזרות רק אלה שכבר קיימות באלבום.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "hashes"
+                ],
+                "properties": {
+                  "hashes": {
+                    "type": "array",
+                    "maxItems": 500,
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    }
+                  }
+                }
+              },
+              "example": {
+                "hashes": [
+                  "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "ה-hashes שכבר קיימים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "existing": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "existing": []
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "נתונים לא תקינים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                },
+                "example": {
+                  "error": "הנתונים שנשלחו לא תקינים",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "כתובת מייל לא תקינה"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "לא מחובר, או שהטוקן לא תקין או שפג תוקפו",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "צריך להתחבר כדי לבצע את הפעולה"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "המשתמש אינו מנהל האלבום ואינו משתתף בו",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "אין לך הרשאה לאלבום הזה"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "האלבום לא נמצא",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "האלבום לא נמצא"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/albums/{albumId}/photos/{photoId}": {
+      "parameters": [
+        {
+          "name": "albumId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "מזהה האלבום",
+          "example": 1
+        },
+        {
+          "name": "photoId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "מזהה התמונה",
+          "example": 1
+        }
+      ],
+      "delete": {
+        "tags": [
+          "Photos"
+        ],
+        "summary": "מחיקת תמונה",
+        "description": "מנהל בלבד.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "נמחקה"
+          },
+          "400": {
+            "description": "נתונים לא תקינים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                },
+                "example": {
+                  "error": "הנתונים שנשלחו לא תקינים",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "כתובת מייל לא תקינה"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "לא מחובר, או שהטוקן לא תקין או שפג תוקפו",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "צריך להתחבר כדי לבצע את הפעולה"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "רק מנהל האלבום רשאי",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "רק מנהל האלבום יכול לבצע את הפעולה"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "התמונה לא נמצאה",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "התמונה לא נמצאה"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/albums/{albumId}/photos/{photoId}/like": {
+      "parameters": [
+        {
+          "name": "albumId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "מזהה האלבום",
+          "example": 1
+        },
+        {
+          "name": "photoId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "מזהה התמונה",
+          "example": 1
+        }
+      ],
+      "post": {
+        "tags": [
+          "Photos"
+        ],
+        "summary": "לייק",
+        "description": "לייק כפול מאותו משתמש לא נספר פעמיים.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "מצב הלייקים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LikeState"
+                },
+                "example": {
+                  "photoId": 12,
+                  "likeCount": 4,
+                  "likedByMe": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "נתונים לא תקינים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                },
+                "example": {
+                  "error": "הנתונים שנשלחו לא תקינים",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "כתובת מייל לא תקינה"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "לא מחובר, או שהטוקן לא תקין או שפג תוקפו",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "צריך להתחבר כדי לבצע את הפעולה"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "המשתמש אינו מנהל האלבום ואינו משתתף בו",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "אין לך הרשאה לאלבום הזה"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "התמונה לא נמצאה",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "התמונה לא נמצאה"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Photos"
+        ],
+        "summary": "ביטול לייק",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "מצב הלייקים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LikeState"
+                },
+                "example": {
+                  "photoId": 12,
+                  "likeCount": 3,
+                  "likedByMe": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "נתונים לא תקינים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                },
+                "example": {
+                  "error": "הנתונים שנשלחו לא תקינים",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "כתובת מייל לא תקינה"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "לא מחובר, או שהטוקן לא תקין או שפג תוקפו",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "צריך להתחבר כדי לבצע את הפעולה"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "המשתמש אינו מנהל האלבום ואינו משתתף בו",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "אין לך הרשאה לאלבום הזה"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "התמונה לא נמצאה",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "התמונה לא נמצאה"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

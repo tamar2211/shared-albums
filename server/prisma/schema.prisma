@@ -1,0 +1,86 @@
+// מבנה מסד הנתונים. כל שינוי כאן מחייב migration חדש.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// סטטוס אלבום: פתוח להעלאות או נעול
+enum AlbumStatus {
+  open
+  locked
+}
+
+/// משתמש רשום
+model User {
+  id           Int         @id @default(autoincrement())
+  name         String
+  email        String      @unique
+  passwordHash String
+  createdAt    DateTime    @default(now())
+  albums       Album[]     @relation("AlbumOwner")
+  photos       Photo[]     @relation("PhotoUploader")
+  likes        PhotoLike[]
+}
+
+/// אלבום - האובייקט המרכזי במערכת
+model Album {
+  id          Int           @id @default(autoincrement())
+  name        String
+  description String        @default("")
+  eventDate   DateTime?     @db.Date
+  status      AlbumStatus   @default(open)
+  ownerId     Int
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  owner       User          @relation("AlbumOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members     AlbumMember[]
+  photos      Photo[]
+
+  @@index([ownerId])
+}
+
+/// משתתף באלבום. נשמר לפי מייל, כדי שאפשר יהיה להוסיף מי שעוד לא נרשם.
+model AlbumMember {
+  albumId Int
+  email   String
+  album   Album  @relation(fields: [albumId], references: [id], onDelete: Cascade)
+
+  @@id([albumId, email])
+  @@index([email])
+}
+
+/// תמונה באלבום. הקובץ עצמו נשמר ב-Cloudinary.
+model Photo {
+  id           Int         @id @default(autoincrement())
+  albumId      Int
+  url          String
+  publicId     String
+  hash         String
+  originalName String      @default("")
+  width        Int?
+  height       Int?
+  uploadedById Int?
+  uploadedAt   DateTime    @default(now())
+  album        Album       @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  uploadedBy   User?       @relation("PhotoUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  likes        PhotoLike[]
+
+  @@unique([albumId, hash])
+}
+
+/// לייק של משתמש לתמונה. לכל משתמש לייק אחד לכל תמונה.
+model PhotoLike {
+  photoId   Int
+  userId    Int
+  createdAt DateTime @default(now())
+  photo     Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([photoId, userId])
+  @@index([userId])
+}
