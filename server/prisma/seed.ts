@@ -1,4 +1,4 @@
-// נתוני הדגמה: שלושה משתמשים, שלושה אלבומים, תמונות ולייקים.
+// נתוני הדגמה: שלושה משתמשים, שלושה אלבומים, משתתפים (רשומים ואורחים), תמונות ולייקים.
 // הרצה: npm run db:seed
 //
 // התמונות לקוחות מתמונות הדוגמה שמגיעות עם כל חשבון Cloudinary חדש (נופים, אוכל ובעלי חיים),
@@ -8,7 +8,7 @@ import 'dotenv/config';
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { v2 as cloudinary } from 'cloudinary';
-import { PrismaClient } from '@prisma/client';
+import { type AlbumCategory, PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -75,13 +75,37 @@ async function addPhotos(albumId: number, uploadedById: number, publicIds: strin
   return ids;
 }
 
+const joinCode = () => crypto.randomBytes(12).toString('base64url');
+
+/** אלבום עם המנהל כמשתתף ראשון */
+async function createAlbum(
+  owner: { id: number; name: string },
+  data: { name: string; description: string; eventDate: string; allowUpload: boolean; category: AlbumCategory },
+) {
+  const album = await prisma.album.create({
+    data: {
+      ...data,
+      eventDate: new Date(`${data.eventDate}T00:00:00.000Z`),
+      joinCode: joinCode(),
+      ownerId: owner.id,
+      participants: { create: { name: owner.name, userId: owner.id, isOwner: true } },
+    },
+    include: { participants: true },
+  });
+  return { album, ownerParticipant: album.participants[0] };
+}
+
+/** משתתף שהצטרף דרך הקישור: עם חשבון (userId) או אורח (בלי) */
+const addParticipant = (albumId: number, name: string, userId: number | null = null) =>
+  prisma.participant.create({ data: { albumId, name, userId } });
+
 async function main() {
   console.log('מוחקת נתוני הדגמה קודמים...');
   await prisma.user.deleteMany({ where: { email: { in: demoUsers.map((u) => u.email) } } });
 
   console.log('יוצרת משתמשים...');
   const passwordHash = await bcrypt.hash(password as string, 10);
-  const users: Record<string, { id: number; email: string }> = {};
+  const users: Record<string, { id: number; email: string; name: string }> = {};
   for (const user of demoUsers) {
     const created = await prisma.user.create({
       data: { name: user.name, email: user.email, passwordHash },
@@ -92,59 +116,66 @@ async function main() {
   const member = users.member;
   const outsider = users.outsider;
 
-  console.log('יוצרת אלבומים...');
-  const barMitzvah = await prisma.album.create({
-    data: {
-      name: 'בר מצווה של יוסי',
-      description: 'כל התמונות מהשמחה, מהבית הכנסת ועד הסעודה',
-      eventDate: new Date('2026-09-14T00:00:00.000Z'),
-      status: 'open',
-      ownerId: owner.id,
-      members: { create: [{ email: member.email }] },
-    },
+  console.log('יוצרת אלבומים ומשתתפים...');
+  const bar = await createAlbum(owner, {
+    name: 'בר מצווה של יוסי',
+    description: 'כל התמונות מהשמחה, מהבית הכנסת ועד הסעודה',
+    eventDate: '2026-09-14',
+    allowUpload: true,
+    category: 'family',
   });
+  const barMember = await addParticipant(bar.album.id, member.name, member.id);
+  const barGuest = await addParticipant(bar.album.id, 'סבתא אסתר');
 
-  const trip = await prisma.album.create({
-    data: {
-      name: 'טיול משפחתי לגליל',
-      description: 'שלושה ימים בצפון. האלבום נעול להעלאות',
-      eventDate: new Date('2026-08-03T00:00:00.000Z'),
-      status: 'locked',
-      ownerId: owner.id,
-      members: { create: [{ email: member.email }, { email: 'family.demo@example.com' }] },
-    },
+  const trip = await createAlbum(owner, {
+    name: 'טיול משפחתי לגליל',
+    description: 'שלושה ימים בצפון. האלבום נעול להעלאות של משתתפים',
+    eventDate: '2026-08-03',
+    allowUpload: false,
+    category: 'trip',
   });
+  const tripMember = await addParticipant(trip.album.id, member.name, member.id);
+  await addParticipant(trip.album.id, 'דוד משה');
 
-  const classParty = await prisma.album.create({
-    data: {
-      name: 'מסיבת סיום כיתה ו׳',
-      description: 'תמונות מהמסיבה בחצר בית הספר',
-      eventDate: new Date('2026-06-25T00:00:00.000Z'),
-      status: 'open',
-      ownerId: member.id,
-      members: { create: [{ email: owner.email }] },
-    },
+  const classParty = await createAlbum(member, {
+    name: 'מסיבת סיום כיתה ו׳',
+    description: 'תמונות מהמסיבה בחצר בית הספר',
+    eventDate: '2026-06-25',
+    allowUpload: true,
+    category: 'class',
   });
+  const classOwnerJoined = await addParticipant(classParty.album.id, owner.name, owner.id);
+  const classGuest = await addParticipant(classParty.album.id, 'נועם');
 
   console.log('מוסיפה תמונות מחשבון Cloudinary...');
-  const barPhotos = await addPhotos(barMitzvah.id, owner.id, samplePhotos.barMitzvah);
-  const tripPhotos = await addPhotos(trip.id, member.id, samplePhotos.trip);
-  const classPhotos = await addPhotos(classParty.id, member.id, samplePhotos.classParty);
+  const barPhotos = [
+    ...(await addPhotos(bar.album.id, bar.ownerParticipant.id, samplePhotos.barMitzvah.slice(0, 2))),
+    ...(await addPhotos(bar.album.id, barGuest.id, samplePhotos.barMitzvah.slice(2))),
+  ];
+  const tripPhotos = await addPhotos(trip.album.id, tripMember.id, samplePhotos.trip);
+  const classPhotos = [
+    ...(await addPhotos(classParty.album.id, classParty.ownerParticipant.id, samplePhotos.classParty.slice(0, 2))),
+    ...(await addPhotos(classParty.album.id, classGuest.id, samplePhotos.classParty.slice(2))),
+  ];
 
   console.log('מוסיפה לייקים...');
   const likes = [
-    ...barPhotos.slice(0, 2).map((photoId) => ({ photoId, userId: member.id })),
-    ...barPhotos.slice(0, 1).map((photoId) => ({ photoId, userId: owner.id })),
-    ...tripPhotos.slice(0, 3).map((photoId) => ({ photoId, userId: owner.id })),
-    ...classPhotos.slice(1, 3).map((photoId) => ({ photoId, userId: owner.id })),
+    ...barPhotos.slice(0, 2).map((photoId) => ({ photoId, participantId: barMember.id })),
+    ...barPhotos.slice(0, 1).map((photoId) => ({ photoId, participantId: barGuest.id })),
+    ...tripPhotos.slice(0, 3).map((photoId) => ({ photoId, participantId: trip.ownerParticipant.id })),
+    ...classPhotos.slice(1, 3).map((photoId) => ({ photoId, participantId: classOwnerJoined.id })),
   ];
   await prisma.photoLike.createMany({ data: likes, skipDuplicates: true });
 
   console.log('\nנתוני ההדגמה מוכנים. משתמשים (הסיסמה היא SEED_PASSWORD):');
-  console.log(`  ${owner.email}    מנהלת של "בר מצווה" ו"טיול", משתתפת ב"מסיבת סיום"`);
-  console.log(`  ${member.email}      משתתפת ב"בר מצווה" ו"טיול", מנהלת של "מסיבת סיום"`);
-  console.log(`  ${outsider.email}   לא שייכת לאף אלבום (לבדיקת 403)`);
-  console.log(`תמונות שנוספו: ${barPhotos.length + tripPhotos.length + classPhotos.length}`);
+  console.log(`  ${owner.email}    מנהלת של "בר מצווה" ו"טיול", הצטרפה ל"מסיבת סיום"`);
+  console.log(`  ${member.email}      הצטרפה ל"בר מצווה" ו"טיול", מנהלת של "מסיבת סיום"`);
+  console.log(`  ${outsider.email}   לא הצטרפה לאף אלבום (לבדיקת 403)`);
+  console.log('\nקודי הצטרפות (לבדיקת הצטרפות כאורח, בכתובת /join/<קוד>):');
+  console.log(`  בר מצווה:     ${bar.album.joinCode}`);
+  console.log(`  טיול:         ${trip.album.joinCode}`);
+  console.log(`  מסיבת סיום:   ${classParty.album.joinCode}`);
+  console.log(`\nתמונות שנוספו: ${barPhotos.length + tripPhotos.length + classPhotos.length}`);
 }
 
 main()

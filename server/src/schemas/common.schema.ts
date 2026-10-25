@@ -9,3 +9,7 @@ export const albumIdParams = z.object({
 export const photoIdParams = albumIdParams.extend({
   photoId: z.coerce.number().int().positive('מזהה התמונה לא תקין'),
 });
+
+export const participantIdParams = albumIdParams.extend({
+  participantId: z.coerce.number().int().positive('מזהה המשתתף לא תקין'),
+});

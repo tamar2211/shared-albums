@@ -14,6 +14,11 @@ const expectedOperations = [
   'GET /api/albums/{albumId}',
   'PUT /api/albums/{albumId}',
   'DELETE /api/albums/{albumId}',
+  'POST /api/albums/{albumId}/join-code',
+  'GET /api/albums/{albumId}/participants',
+  'DELETE /api/albums/{albumId}/participants/{participantId}',
+  'GET /api/join/{code}',
+  'POST /api/join/{code}',
   'GET /api/albums/{albumId}/photos',
   'POST /api/albums/{albumId}/photos',
   'POST /api/albums/{albumId}/photos/check',
@@ -41,7 +46,8 @@ describe('Swagger ו-OpenAPI', () => {
     const res = await api().get('/openapi.json');
     expect(res.body.components.securitySchemes.bearerAuth).toMatchObject({ type: 'http', scheme: 'bearer' });
 
-    const publicOps = ['/api/health', '/api/auth/register', '/api/auth/login'];
+    // נתיבי ההצטרפות פתוחים למי שיש לו את הקישור
+    const publicOps = ['/api/health', '/api/auth/register', '/api/auth/login', '/api/join/{code}'];
     for (const [path, item] of Object.entries(res.body.paths as Record<string, Record<string, { security?: unknown }>>)) {
       if (publicOps.includes(path)) continue;
       for (const [method, op] of Object.entries(item)) {

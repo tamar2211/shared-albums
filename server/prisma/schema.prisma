@@ -9,78 +9,96 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// סטטוס אלבום: פתוח להעלאות או נעול
-enum AlbumStatus {
-  open
-  locked
+/// קטגוריית אלבום
+enum AlbumCategory {
+  family
+  trip
+  class
+  other
 }
 
-/// משתמש רשום
+/// משתמש רשום. רק מי שפותח אלבומים צריך חשבון.
 model User {
-  id           Int         @id @default(autoincrement())
+  id           Int           @id @default(autoincrement())
   name         String
-  email        String      @unique
+  email        String        @unique
   passwordHash String
-  createdAt    DateTime    @default(now())
-  albums       Album[]     @relation("AlbumOwner")
-  photos       Photo[]     @relation("PhotoUploader")
-  likes        PhotoLike[]
+  createdAt    DateTime      @default(now())
+  albums       Album[]       @relation("AlbumOwner")
+  participants Participant[]
 }
 
 /// אלבום - האובייקט המרכזי במערכת
 model Album {
-  id          Int           @id @default(autoincrement())
-  name        String
-  description String        @default("")
-  eventDate   DateTime?     @db.Date
-  status      AlbumStatus   @default(open)
-  ownerId     Int
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  owner       User          @relation("AlbumOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  members     AlbumMember[]
-  photos      Photo[]
+  id           Int           @id @default(autoincrement())
+  name         String
+  description  String        @default("")
+  eventDate    DateTime?     @db.Date
+  category     AlbumCategory @default(other)
+  /// האם משתתפים יכולים להוריד תמונות. כשכבוי, משתתפים מקבלים רק גרסת צפייה מוקטנת.
+  allowDownload Boolean      @default(true)
+  /// האם משתתפים יכולים להעלות תמונות. המנהל תמיד יכול.
+  allowUpload  Boolean       @default(true)
+  /// הקוד שבקישור ההצטרפות. יצירת קישור חדש מחליפה אותו, והקישור הישן מפסיק לעבוד.
+  joinCode     String        @unique
+  ownerId      Int
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  owner        User          @relation("AlbumOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  participants Participant[]
+  photos       Photo[]
 
   @@index([ownerId])
 }
 
-/// משתתף באלבום. נשמר לפי מייל, כדי שאפשר יהיה להוסיף מי שעוד לא נרשם.
-model AlbumMember {
-  albumId Int
-  email   String
-  album   Album  @relation(fields: [albumId], references: [id], onDelete: Cascade)
+/// משתתף באלבום: המנהל, אורח שהצטרף דרך הקישור, או משתמש רשום שהצטרף דרך הקישור.
+/// כל ההעלאות והלייקים משויכים למשתתף, כך שאורחים ומשתמשים רשומים עובדים באותה צורה.
+model Participant {
+  id        Int         @id @default(autoincrement())
+  albumId   Int
+  name      String
+  /// מלא כשהמשתתף הוא משתמש רשום (תמיד אצל המנהל). ריק אצל אורח.
+  userId    Int?
+  isOwner   Boolean     @default(false)
+  /// מלא כשהמנהל הסיר את המשתתף. התמונות שלו נשארות, אבל הגישה נחסמת.
+  removedAt DateTime?
+  createdAt DateTime    @default(now())
+  album     Album       @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  photos    Photo[]
+  likes     PhotoLike[]
 
-  @@id([albumId, email])
-  @@index([email])
+  @@unique([albumId, userId])
+  @@index([albumId])
 }
 
 /// תמונה באלבום. הקובץ עצמו נשמר ב-Cloudinary.
 model Photo {
-  id           Int         @id @default(autoincrement())
+  id           Int          @id @default(autoincrement())
   albumId      Int
   url          String
   publicId     String
   hash         String
-  originalName String      @default("")
+  originalName String       @default("")
   width        Int?
   height       Int?
   uploadedById Int?
-  uploadedAt   DateTime    @default(now())
-  album        Album       @relation(fields: [albumId], references: [id], onDelete: Cascade)
-  uploadedBy   User?       @relation("PhotoUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  uploadedAt   DateTime     @default(now())
+  album        Album        @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  uploadedBy   Participant? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
   likes        PhotoLike[]
 
   @@unique([albumId, hash])
 }
 
-/// לייק של משתמש לתמונה. לכל משתמש לייק אחד לכל תמונה.
+/// לייק של משתתף לתמונה. לכל משתתף לייק אחד לכל תמונה.
 model PhotoLike {
-  photoId   Int
-  userId    Int
-  createdAt DateTime @default(now())
-  photo     Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  photoId       Int
+  participantId Int
+  createdAt     DateTime    @default(now())
+  photo         Photo       @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
 
-  @@id([photoId, userId])
-  @@index([userId])
+  @@id([photoId, participantId])
+  @@index([participantId])
 }

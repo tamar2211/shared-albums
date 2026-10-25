@@ -6,6 +6,7 @@ import { swaggerRouter } from './docs/swagger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { albumRouter } from './routes/album.routes';
 import { authRouter } from './routes/auth.routes';
+import { joinRouter } from './routes/join.routes';
 
 export function createApp() {
   const app = express();
@@ -29,6 +30,7 @@ export function createApp() {
 
   app.use('/api/auth', authRouter);
   app.use('/api/albums', albumRouter);
+  app.use('/api/join', joinRouter);
   app.use(swaggerRouter());
 
   app.get('/', (_req, res) => {

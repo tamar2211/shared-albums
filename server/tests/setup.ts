@@ -22,5 +22,6 @@ vi.mock('../src/services/storage.service', () => {
     }),
     deleteImages: vi.fn(async () => undefined),
     thumbUrl: (publicId: string) => `https://images.test/thumb/${publicId}.png`,
+    viewUrl: (publicId: string) => `https://images.test/view/${publicId}.png`,
   };
 });

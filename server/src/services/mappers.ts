@@ -1,20 +1,32 @@
 // המרה מרשומות מסד הנתונים לצורה שהלקוח מקבל (DTO).
-import type { Album, AlbumStatus } from '@prisma/client';
+import type { Album, AlbumCategory } from '@prisma/client';
 import type { AlbumRole } from './access.service';
-import { thumbUrl } from './storage.service';
+import { thumbUrl, viewUrl } from './storage.service';
 
 export interface AlbumDto {
   id: number;
   name: string;
   description: string;
   eventDate: string | null;
-  status: AlbumStatus;
+  category: AlbumCategory;
+  /** האם משתתפים יכולים להוריד. המנהל תמיד יכול. */
+  allowDownload: boolean;
+  /** האם מי שמבצע את הבקשה יכול להוריד: מנהל, או משתתף כש-allowDownload פעיל */
+  canDownload: boolean;
+  /** האם משתתפים יכולים להעלות. המנהל תמיד יכול. */
+  allowUpload: boolean;
+  /** האם מי שמבצע את הבקשה יכול להעלות: מנהל, או משתתף כש-allowUpload פעיל */
+  canUpload: boolean;
   ownerId: number;
   ownerName: string;
   role: AlbumRole;
   photoCount: number;
+  participantCount: number;
   coverUrl: string | null;
-  memberEmails?: string[];
+  /** קוד קישור ההצטרפות. מוחזר רק למנהל. */
+  joinCode?: string;
+  /** המשתתף שמבצע את הבקשה. מוחזר בצפייה באלבום אחד. */
+  me?: { participantId: number; name: string };
   createdAt: string;
   updatedAt: string;
 }
@@ -22,15 +34,27 @@ export interface AlbumDto {
 export interface PhotoDto {
   id: number;
   albumId: number;
+  /** תמונה מלאה. למשתתף באלבום שההורדה בו כבויה: גרסת צפייה מוקטנת */
   url: string;
   thumbUrl: string;
   width: number | null;
   height: number | null;
   originalName: string;
+  /** id הוא מזהה המשתתף שהעלה */
   uploadedBy: { id: number; name: string } | null;
   uploadedAt: string;
   likeCount: number;
   likedByMe: boolean;
+}
+
+export interface ParticipantDto {
+  id: number;
+  name: string;
+  isOwner: boolean;
+  /** משתמש רשום שהצטרף (ולא אורח) */
+  registered: boolean;
+  photoCount: number;
+  joinedAt: string;
 }
 
 /** תאריך מסוג DATE חוזר כ-"2026-10-21" */
@@ -43,14 +67,25 @@ export function parseDate(value: string | null): Date | null {
   return value ? new Date(`${value}T00:00:00.000Z`) : null;
 }
 
+/** המנהל תמיד יכול להוריד. משתתף רק כשההורדה מותרת באלבום */
+export function canDownload(album: { allowDownload: boolean }, role: AlbumRole): boolean {
+  return role === 'owner' || album.allowDownload;
+}
+
+/** המנהל תמיד יכול להעלות. משתתף רק כשההעלאה מותרת באלבום */
+export function canUpload(album: { allowUpload: boolean }, role: AlbumRole): boolean {
+  return role === 'owner' || album.allowUpload;
+}
+
 export function toAlbumDto(
   album: Album,
   extra: {
     ownerName: string;
     role: AlbumRole;
     photoCount: number;
+    participantCount: number;
     coverPublicId?: string | null;
-    memberEmails?: string[];
+    me?: { participantId: number; name: string };
   },
 ): AlbumDto {
   return {
@@ -58,13 +93,19 @@ export function toAlbumDto(
     name: album.name,
     description: album.description,
     eventDate: formatDate(album.eventDate),
-    status: album.status,
+    category: album.category,
+    allowDownload: album.allowDownload,
+    canDownload: canDownload(album, extra.role),
+    allowUpload: album.allowUpload,
+    canUpload: canUpload(album, extra.role),
     ownerId: album.ownerId,
     ownerName: extra.ownerName,
     role: extra.role,
     photoCount: extra.photoCount,
+    participantCount: extra.participantCount,
     coverUrl: extra.coverPublicId ? thumbUrl(extra.coverPublicId) : null,
-    ...(extra.memberEmails ? { memberEmails: extra.memberEmails } : {}),
+    ...(extra.role === 'owner' ? { joinCode: album.joinCode } : {}),
+    ...(extra.me ? { me: extra.me } : {}),
     createdAt: album.createdAt.toISOString(),
     updatedAt: album.updatedAt.toISOString(),
   };
@@ -81,14 +122,15 @@ export interface PhotoRecord {
   uploadedAt: Date;
   uploadedBy: { id: number; name: string } | null;
   _count: { likes: number };
-  likes: { userId: number }[];
+  likes: { participantId: number }[];
 }
 
-export function toPhotoDto(photo: PhotoRecord): PhotoDto {
+/** fullSize: false מחזיר גרסת צפייה במקום הקובץ המלא */
+export function toPhotoDto(photo: PhotoRecord, fullSize = true): PhotoDto {
   return {
     id: photo.id,
     albumId: photo.albumId,
-    url: photo.url,
+    url: fullSize ? photo.url : viewUrl(photo.publicId),
     thumbUrl: thumbUrl(photo.publicId),
     width: photo.width,
     height: photo.height,

@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Shared Albums API",
-    "version": "1.0.0",
-    "description": "API לאתר האלבומים השיתופיים.\n\nאיך בודקים: מתחברים ב-POST /api/auth/login, מעתיקים את ה-token מהתשובה, לוחצים Authorize ומדביקים אותו. מכאן כל הקריאות המוגנות נשלחות עם הטוקן.\n\nתפקידים: מנהל אלבום (מי שיצר אותו) ומשתתף (מייל ברשימת המשתתפים). כל ההרשאות נבדקות בשרת."
+    "version": "1.1.0",
+    "description": "API לאתר האלבומים השיתופיים.\n\nאיך בודקים: מתחברים ב-POST /api/auth/login, מעתיקים את ה-token מהתשובה, לוחצים Authorize ומדביקים אותו. מכאן כל הקריאות המוגנות נשלחות עם הטוקן.\n\nשני סוגי משתמשים:\n- משתמש רשום: נרשם ומתחבר עם מייל וסיסמה. פותח אלבומים ומנהל אותם.\n- משתתף שהצטרף דרך קישור: נכנס עם קישור ההצטרפות של אלבום וכותב שם לתצוגה, בלי הרשמה. מקבל טוקן משתתף שעובד רק באלבום הזה.\n\nתפקידים באלבום: מנהל (מי שיצר אותו) ומשתתף (מי שהצטרף דרך הקישור). כל ההרשאות נבדקות בשרת."
   },
   "servers": [
     {
@@ -20,8 +20,12 @@
       "description": "הרשמה והתחברות"
     },
     {
+      "name": "Join",
+      "description": "הצטרפות לאלבום דרך קישור"
+    },
+    {
       "name": "Albums",
-      "description": "אלבומים"
+      "description": "אלבומים, משתתפים וקישור הצטרפות"
     },
     {
       "name": "Photos",
@@ -152,14 +156,6 @@
           }
         }
       },
-      "AlbumStatus": {
-        "type": "string",
-        "enum": [
-          "open",
-          "locked"
-        ],
-        "description": "open: אפשר להעלות. locked: נעול להעלאות"
-      },
       "AlbumInput": {
         "type": "object",
         "required": [
@@ -182,18 +178,18 @@
             "nullable": true,
             "description": "YYYY-MM-DD, או null"
           },
-          "status": {
-            "$ref": "#/components/schemas/AlbumStatus"
+          "category": {
+            "$ref": "#/components/schemas/AlbumCategory"
           },
-          "memberEmails": {
-            "type": "array",
-            "maxItems": 200,
-            "items": {
-              "type": "string",
-              "format": "email"
-            },
-            "default": [],
-            "description": "מיילים של משתתפים. המייל של המנהל וכפילויות מוסרים אוטומטית"
+          "allowDownload": {
+            "type": "boolean",
+            "default": true,
+            "description": "האם משתתפים יכולים להוריד תמונות. כשכבוי, משתתפים מקבלים בשדה url רק גרסת צפייה מוקטנת"
+          },
+          "allowUpload": {
+            "type": "boolean",
+            "default": true,
+            "description": "האם משתתפים יכולים להעלות תמונות. כשכבוי, משתתפים מקבלים 403 בהעלאה. המנהל תמיד יכול"
           }
         }
       },
@@ -204,14 +200,19 @@
           "name",
           "description",
           "eventDate",
-          "status",
+          "category",
           "ownerId",
           "ownerName",
           "role",
           "photoCount",
+          "participantCount",
           "coverUrl",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "allowDownload",
+          "canDownload",
+          "allowUpload",
+          "canUpload"
         ],
         "properties": {
           "id": {
@@ -228,8 +229,24 @@
             "format": "date",
             "nullable": true
           },
-          "status": {
-            "$ref": "#/components/schemas/AlbumStatus"
+          "category": {
+            "$ref": "#/components/schemas/AlbumCategory"
+          },
+          "allowDownload": {
+            "type": "boolean",
+            "description": "האם משתתפים יכולים להוריד. המנהל תמיד יכול"
+          },
+          "canDownload": {
+            "type": "boolean",
+            "description": "האם מי שמבצע את הבקשה יכול להוריד. לפי זה מציגים או מסתירים את כפתורי ההורדה"
+          },
+          "allowUpload": {
+            "type": "boolean",
+            "description": "האם משתתפים יכולים להעלות. המנהל תמיד יכול"
+          },
+          "canUpload": {
+            "type": "boolean",
+            "description": "האם מי שמבצע את הבקשה יכול להעלות. לפי זה מציגים או מסתירים את כפתור ההעלאה"
           },
           "ownerId": {
             "type": "integer"
@@ -243,22 +260,35 @@
               "owner",
               "member"
             ],
-            "description": "התפקיד של המשתמש המחובר באלבום"
+            "description": "התפקיד של מי שמבצע את הבקשה באלבום"
           },
           "photoCount": {
             "type": "integer"
+          },
+          "participantCount": {
+            "type": "integer",
+            "description": "משתתפים פעילים, כולל המנהל"
           },
           "coverUrl": {
             "type": "string",
             "nullable": true,
             "description": "תמונה ממוזערת של התמונה הראשונה"
           },
-          "memberEmails": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "מופיע בצפייה באלבום אחד, ביצירה ובעריכה"
+          "joinCode": {
+            "type": "string",
+            "description": "קוד קישור ההצטרפות. מוחזר רק למנהל. הקישור המלא: <כתובת האתר>/join/<joinCode>"
+          },
+          "me": {
+            "type": "object",
+            "description": "המשתתף שמבצע את הבקשה. מוחזר בצפייה באלבום אחד, ביצירה ובעריכה",
+            "properties": {
+              "participantId": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
           },
           "createdAt": {
             "type": "string",
@@ -314,7 +344,7 @@
           },
           "url": {
             "type": "string",
-            "description": "תמונה מלאה, להצגה ולהורדה"
+            "description": "תמונה מלאה להורדה. למשתתף באלבום שההורדה בו כבויה: גרסת צפייה עד 1200 פיקסלים"
           },
           "thumbUrl": {
             "type": "string",
@@ -341,7 +371,8 @@
               "name": {
                 "type": "string"
               }
-            }
+            },
+            "description": "המשתתף שהעלה: id הוא מזהה המשתתף, name הוא השם לתצוגה"
           },
           "uploadedAt": {
             "type": "string",
@@ -432,6 +463,155 @@
           },
           "likedByMe": {
             "type": "boolean"
+          }
+        }
+      },
+      "AlbumCategory": {
+        "type": "string",
+        "enum": [
+          "family",
+          "trip",
+          "class",
+          "other"
+        ],
+        "description": "family = אירוע משפחתי, trip = טיול, class = כיתה, other = אחר",
+        "default": "other"
+      },
+      "Participant": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "isOwner",
+          "registered",
+          "photoCount",
+          "joinedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string",
+            "description": "שם לתצוגה"
+          },
+          "isOwner": {
+            "type": "boolean"
+          },
+          "registered": {
+            "type": "boolean",
+            "description": "true למשתמש רשום, false לאורח שהצטרף בלי חשבון"
+          },
+          "photoCount": {
+            "type": "integer"
+          },
+          "joinedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ParticipantList": {
+        "type": "object",
+        "required": [
+          "participants"
+        ],
+        "properties": {
+          "participants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Participant"
+            }
+          }
+        }
+      },
+      "JoinInfo": {
+        "type": "object",
+        "required": [
+          "albumId",
+          "name",
+          "ownerName",
+          "eventDate",
+          "allowUpload",
+          "photoCount",
+          "coverUrl"
+        ],
+        "properties": {
+          "albumId": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ownerName": {
+            "type": "string"
+          },
+          "eventDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "allowUpload": {
+            "type": "boolean",
+            "description": "האם משתתפים יכולים להעלות"
+          },
+          "photoCount": {
+            "type": "integer"
+          },
+          "coverUrl": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "JoinInput": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "description": "שם לתצוגה. חובה לאורח. משתמש מחובר יכול לשלוח גוף ריק, ואז נלקח השם מהחשבון"
+          }
+        }
+      },
+      "JoinResult": {
+        "type": "object",
+        "required": [
+          "albumId",
+          "participant",
+          "token"
+        ],
+        "properties": {
+          "albumId": {
+            "type": "integer"
+          },
+          "participant": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "token": {
+            "type": "string",
+            "nullable": true,
+            "description": "טוקן משתתף לאורח: שומרים אותו בדפדפן ושולחים כ-Bearer בבקשות של האלבום הזה. משתמש מחובר מקבל null וממשיך עם הטוקן שלו"
+          }
+        }
+      },
+      "JoinCode": {
+        "type": "object",
+        "required": [
+          "joinCode"
+        ],
+        "properties": {
+          "joinCode": {
+            "type": "string"
           }
         }
       }
@@ -667,13 +847,153 @@
         }
       }
     },
+    "/api/join/{code}": {
+      "parameters": [
+        {
+          "name": "code",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "description": "הקוד מתוך קישור ההצטרפות",
+          "example": "kX9pQ2mL7vR4tZ8w"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Join"
+        ],
+        "summary": "פרטי האלבום לדף ההצטרפות",
+        "description": "פתוח לכל מי שיש לו את הקישור. מחזיר מה להציג לפני ההצטרפות.",
+        "responses": {
+          "200": {
+            "description": "פרטי האלבום",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinInfo"
+                },
+                "example": {
+                  "albumId": 1,
+                  "name": "בר מצווה של יוסי",
+                  "ownerName": "רחל כהן",
+                  "eventDate": "2026-09-14",
+                  "photoCount": 4,
+                  "coverUrl": "https://res.cloudinary.com/demo/image/upload/c_fill,g_auto,h_400,w_400/samples/food/dessert",
+                  "allowUpload": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "הקוד לא קיים, או שהמנהל החליף את הקישור",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "הקישור לא תקין, או שמנהל האלבום החליף אותו בקישור חדש"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Join"
+        ],
+        "summary": "הצטרפות לאלבום",
+        "description": "אורח: שולח שם לתצוגה ומקבל טוקן משתתף, שעובד רק באלבום הזה. משתמש מחובר (עם Bearer של משתמש): מצטרף עם החשבון, מקבל token: null, והאלבום מופיע אצלו ב-shared. הצטרפות חוזרת של משתמש רשום מחזירה את אותו משתתף.",
+        "security": [
+          {},
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JoinInput"
+              },
+              "example": {
+                "name": "סבתא אסתר"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "הצטרף",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinResult"
+                },
+                "example": {
+                  "albumId": 1,
+                  "participant": {
+                    "id": 7,
+                    "name": "סבתא אסתר"
+                  },
+                  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "אורח בלי שם",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "צריך לכתוב שם לתצוגה כדי להצטרף"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "משתמש שהמנהל הסיר, או אלבום מלא",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "מנהל האלבום הסיר אותך מהאלבום"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "הקוד לא קיים, או שהמנהל החליף את הקישור",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "הקישור לא תקין, או שמנהל האלבום החליף אותו בקישור חדש"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/albums": {
       "get": {
         "tags": [
           "Albums"
         ],
         "summary": "האלבומים שלי",
-        "description": "אלבומים שפתחתי ואלבומים ששותפו איתי, מהחדש לישן.",
+        "description": "owned: אלבומים שפתחתי. shared: אלבומים שהצטרפתי אליהם דרך קישור כשהייתי מחוברת לחשבון. משתמש רשום בלבד.",
         "security": [
           {
             "bearerAuth": []
@@ -707,15 +1027,18 @@
                       "name": "בר מצווה של יוסי",
                       "description": "כל התמונות מהשמחה",
                       "eventDate": "2026-09-14",
-                      "status": "open",
+                      "category": "family",
+                      "allowDownload": true,
+                      "canDownload": true,
+                      "allowUpload": true,
+                      "canUpload": true,
                       "ownerId": 1,
                       "ownerName": "רחל כהן",
                       "role": "owner",
                       "photoCount": 4,
+                      "participantCount": 3,
                       "coverUrl": "https://res.cloudinary.com/demo/image/upload/c_fill,g_auto,h_400,w_400/samples/food/dessert",
-                      "memberEmails": [
-                        "sara.demo@example.com"
-                      ],
+                      "joinCode": "kX9pQ2mL7vR4tZ8w",
                       "createdAt": "2026-10-21T08:00:00.000Z",
                       "updatedAt": "2026-10-21T08:00:00.000Z"
                     }
@@ -781,10 +1104,9 @@
                 "name": "בר מצווה של יוסי",
                 "description": "כל התמונות מהשמחה",
                 "eventDate": "2026-09-14",
-                "status": "open",
-                "memberEmails": [
-                  "sara.demo@example.com"
-                ]
+                "category": "family",
+                "allowDownload": true,
+                "allowUpload": true
               }
             }
           }
@@ -802,15 +1124,18 @@
                   "name": "בר מצווה של יוסי",
                   "description": "כל התמונות מהשמחה",
                   "eventDate": "2026-09-14",
-                  "status": "open",
+                  "category": "family",
+                  "allowDownload": true,
+                  "canDownload": true,
+                  "allowUpload": true,
+                  "canUpload": true,
                   "ownerId": 1,
                   "ownerName": "רחל כהן",
                   "role": "owner",
                   "photoCount": 4,
+                  "participantCount": 3,
                   "coverUrl": "https://res.cloudinary.com/demo/image/upload/c_fill,g_auto,h_400,w_400/samples/food/dessert",
-                  "memberEmails": [
-                    "sara.demo@example.com"
-                  ],
+                  "joinCode": "kX9pQ2mL7vR4tZ8w",
                   "createdAt": "2026-10-21T08:00:00.000Z",
                   "updatedAt": "2026-10-21T08:00:00.000Z"
                 }
@@ -871,7 +1196,7 @@
           "Albums"
         ],
         "summary": "אלבום אחד",
-        "description": "כולל memberEmails ו-role.",
+        "description": "מנהל, או משתתף שהצטרף דרך הקישור (משתמש רשום או אורח עם טוקן משתתף). כולל role ו-me, ולמנהל גם joinCode.",
         "security": [
           {
             "bearerAuth": []
@@ -890,15 +1215,18 @@
                   "name": "בר מצווה של יוסי",
                   "description": "כל התמונות מהשמחה",
                   "eventDate": "2026-09-14",
-                  "status": "open",
+                  "category": "family",
+                  "allowDownload": true,
+                  "canDownload": true,
+                  "allowUpload": true,
+                  "canUpload": true,
                   "ownerId": 1,
                   "ownerName": "רחל כהן",
                   "role": "owner",
                   "photoCount": 4,
+                  "participantCount": 3,
                   "coverUrl": "https://res.cloudinary.com/demo/image/upload/c_fill,g_auto,h_400,w_400/samples/food/dessert",
-                  "memberEmails": [
-                    "sara.demo@example.com"
-                  ],
+                  "joinCode": "kX9pQ2mL7vR4tZ8w",
                   "createdAt": "2026-10-21T08:00:00.000Z",
                   "updatedAt": "2026-10-21T08:00:00.000Z"
                 }
@@ -970,7 +1298,7 @@
           "Albums"
         ],
         "summary": "עריכת אלבום",
-        "description": "מנהל בלבד. שולחים את כל השדות, כולל status ו-memberEmails. רשימת המשתתפים מוחלפת ברשימה שנשלחה.",
+        "description": "מנהל בלבד. שולחים את כל השדות, כולל allowUpload, allowDownload ו-category.",
         "security": [
           {
             "bearerAuth": []
@@ -987,10 +1315,9 @@
                 "name": "בר מצווה של יוסי",
                 "description": "כל התמונות מהשמחה",
                 "eventDate": "2026-09-14",
-                "status": "locked",
-                "memberEmails": [
-                  "sara.demo@example.com"
-                ]
+                "category": "family",
+                "allowDownload": true,
+                "allowUpload": false
               }
             }
           }
@@ -1008,15 +1335,18 @@
                   "name": "בר מצווה של יוסי",
                   "description": "כל התמונות מהשמחה",
                   "eventDate": "2026-09-14",
-                  "status": "locked",
+                  "category": "family",
+                  "allowDownload": true,
+                  "canDownload": true,
+                  "allowUpload": false,
+                  "canUpload": true,
                   "ownerId": 1,
                   "ownerName": "רחל כהן",
                   "role": "owner",
                   "photoCount": 4,
+                  "participantCount": 3,
                   "coverUrl": "https://res.cloudinary.com/demo/image/upload/c_fill,g_auto,h_400,w_400/samples/food/dessert",
-                  "memberEmails": [
-                    "sara.demo@example.com"
-                  ],
+                  "joinCode": "kX9pQ2mL7vR4tZ8w",
                   "createdAt": "2026-10-21T08:00:00.000Z",
                   "updatedAt": "2026-10-21T08:00:00.000Z"
                 }
@@ -1159,6 +1489,288 @@
         }
       }
     },
+    "/api/albums/{albumId}/join-code": {
+      "parameters": [
+        {
+          "name": "albumId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "מזהה האלבום",
+          "example": 1
+        }
+      ],
+      "post": {
+        "tags": [
+          "Albums"
+        ],
+        "summary": "קישור הצטרפות חדש",
+        "description": "מנהל בלבד. מחליף את הקוד: הקישור הישן מפסיק לעבוד מיד. מי שכבר הצטרף נשאר באלבום.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "הקוד החדש",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinCode"
+                },
+                "example": {
+                  "joinCode": "Qw3rT9yU1iO5pA7s"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "לא מחובר, או שהטוקן לא תקין או שפג תוקפו. טוקן של אורח לא מתקבל כאן",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "צריך להתחבר כדי לבצע את הפעולה"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "רק מנהל האלבום",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "רק מנהל האלבום יכול לבצע את הפעולה"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "האלבום לא נמצא",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "האלבום לא נמצא"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/albums/{albumId}/participants": {
+      "parameters": [
+        {
+          "name": "albumId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "מזהה האלבום",
+          "example": 1
+        }
+      ],
+      "get": {
+        "tags": [
+          "Albums"
+        ],
+        "summary": "רשימת המשתתפים",
+        "description": "מנהל בלבד. המשתתפים הפעילים: המנהל ראשון, ואחריו לפי סדר ההצטרפות.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "המשתתפים",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipantList"
+                },
+                "example": {
+                  "participants": [
+                    {
+                      "id": 1,
+                      "name": "רחל כהן",
+                      "isOwner": true,
+                      "registered": true,
+                      "photoCount": 2,
+                      "joinedAt": "2026-10-21T08:00:00.000Z"
+                    },
+                    {
+                      "id": 2,
+                      "name": "שרה לוי",
+                      "isOwner": false,
+                      "registered": true,
+                      "photoCount": 0,
+                      "joinedAt": "2026-10-21T09:00:00.000Z"
+                    },
+                    {
+                      "id": 3,
+                      "name": "סבתא אסתר",
+                      "isOwner": false,
+                      "registered": false,
+                      "photoCount": 2,
+                      "joinedAt": "2026-10-21T10:00:00.000Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "לא מחובר, או שהטוקן לא תקין או שפג תוקפו. טוקן של אורח לא מתקבל כאן",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "צריך להתחבר כדי לבצע את הפעולה"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "רק מנהל האלבום",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "רק מנהל האלבום יכול לבצע את הפעולה"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "האלבום לא נמצא",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "האלבום לא נמצא"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/albums/{albumId}/participants/{participantId}": {
+      "parameters": [
+        {
+          "name": "albumId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "מזהה האלבום",
+          "example": 1
+        },
+        {
+          "name": "participantId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": "מזהה המשתתף",
+          "example": 3
+        }
+      ],
+      "delete": {
+        "tags": [
+          "Albums"
+        ],
+        "summary": "הסרת משתתף",
+        "description": "מנהל בלבד. הגישה של המשתתף נחסמת מיד. התמונות שהעלה נשארות באלבום, עם השם שלו.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "הוסר"
+          },
+          "400": {
+            "description": "ניסיון להסיר את המנהל",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "אי אפשר להסיר את מנהל האלבום"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "לא מחובר, או שהטוקן לא תקין או שפג תוקפו. טוקן של אורח לא מתקבל כאן",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "צריך להתחבר כדי לבצע את הפעולה"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "רק מנהל האלבום",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "רק מנהל האלבום יכול לבצע את הפעולה"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "האלבום או המשתתף לא נמצאו",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "המשתתף לא נמצא באלבום"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/albums/{albumId}/photos": {
       "parameters": [
         {
@@ -1178,7 +1790,7 @@
           "Photos"
         ],
         "summary": "תמונות האלבום",
-        "description": "מהחדשה לישנה. עם liked=true: רק תמונות עם לייקים, ממוינות לפי מספר הלייקים.",
+        "description": "מהחדשה לישנה. עם liked=true: רק תמונות עם לייקים, ממוינות לפי מספר הלייקים. אפשר גם עם טוקן משתתף (אורח שהצטרף דרך הקישור).",
         "security": [
           {
             "bearerAuth": []
@@ -1295,7 +1907,7 @@
           "Photos"
         ],
         "summary": "העלאת תמונות",
-        "description": "משתתף או מנהל, רק כשהאלבום פתוח. עד 30 קבצים, עד 10MB כל אחד. כפולות (לפי SHA-256) מדולגות.",
+        "description": "משתתף או מנהל, רק כשהאלבום פתוח. עד 30 קבצים, עד 10MB כל אחד. כפולות (לפי SHA-256) מדולגות. אפשר גם עם טוקן משתתף (אורח שהצטרף דרך הקישור).",
         "security": [
           {
             "bearerAuth": []
@@ -1408,7 +2020,7 @@
             }
           },
           "403": {
-            "description": "אין הרשאה או שהאלבום נעול",
+            "description": "אין הרשאה, או שהמנהל כיבה את ההעלאה למשתתפים (allowUpload: false)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1455,7 +2067,7 @@
           "Photos"
         ],
         "summary": "בדיקת כפולות לפני העלאה",
-        "description": "הלקוח מחשב SHA-256 לכל קובץ ושולח את הרשימה. חוזרות רק אלה שכבר קיימות באלבום.",
+        "description": "הלקוח מחשב SHA-256 לכל קובץ ושולח את הרשימה. חוזרות רק אלה שכבר קיימות באלבום. אפשר גם עם טוקן משתתף (אורח שהצטרף דרך הקישור).",
         "security": [
           {
             "bearerAuth": []
@@ -1602,7 +2214,7 @@
           "Photos"
         ],
         "summary": "מחיקת תמונה",
-        "description": "מנהל בלבד.",
+        "description": "מנהל בלבד. אפשר גם עם טוקן משתתף (אורח שהצטרף דרך הקישור).",
         "security": [
           {
             "bearerAuth": []
@@ -1703,7 +2315,7 @@
           "Photos"
         ],
         "summary": "לייק",
-        "description": "לייק כפול מאותו משתמש לא נספר פעמיים.",
+        "description": "לייק כפול מאותו משתמש לא נספר פעמיים. אפשר גם עם טוקן משתתף (אורח שהצטרף דרך הקישור).",
         "security": [
           {
             "bearerAuth": []
@@ -1869,7 +2481,8 @@
               }
             }
           }
-        }
+        },
+        "description": "אפשר גם עם טוקן משתתף (אורח שהצטרף דרך הקישור)."
       }
     }
   }

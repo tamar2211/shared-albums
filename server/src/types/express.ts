@@ -1,4 +1,5 @@
-// מוסיף ל-Request של Express את המשתמש המחובר (req.user), שנקבע לפי הטוקן.
+// מוסיף ל-Request של Express את מי שמבצע את הבקשה, כפי שנקבע לפי הטוקן:
+// משתמש רשום (req.user) או משתתף שהצטרף לאלבום דרך קישור (req.participantId).
 
 export interface AuthUser {
   id: number;
@@ -11,6 +12,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: AuthUser;
+      participantId?: number;
     }
   }
 }

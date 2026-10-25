@@ -2,10 +2,10 @@
 import crypto from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db/prisma';
-import type { AuthUser } from '../types/express';
+import type { Actor } from '../utils/currentUser';
 import { badRequest, forbidden, notFound } from '../utils/httpError';
 import { getAlbumAccess, requireOwner } from './access.service';
-import { type PhotoDto, toPhotoDto } from './mappers';
+import { canDownload, canUpload, type PhotoDto, toPhotoDto } from './mappers';
 import { deleteImages, uploadImage } from './storage.service';
 
 export interface UploadFile {
@@ -25,12 +25,12 @@ export interface LikeState {
   likedByMe: boolean;
 }
 
-/** אילו שדות לטעון לכל תמונה. likes מסונן למשתמש הנוכחי כדי לדעת אם הוא סימן לייק. */
-function photoInclude(userId: number) {
+/** אילו שדות לטעון לכל תמונה. likes מסונן למשתתף הנוכחי כדי לדעת אם הוא סימן לייק. */
+function photoInclude(participantId: number) {
   return {
     uploadedBy: { select: { id: true, name: true } },
     _count: { select: { likes: true } },
-    likes: { where: { userId }, select: { userId: true } },
+    likes: { where: { participantId }, select: { participantId: true } },
   } satisfies Prisma.PhotoInclude;
 }
 
@@ -44,20 +44,21 @@ function fixFileName(name: string): string {
   return decoded.includes('�') ? name : decoded;
 }
 
-export async function listPhotos(user: AuthUser, albumId: number, likedOnly: boolean): Promise<PhotoDto[]> {
-  await getAlbumAccess(albumId, user);
+export async function listPhotos(actor: Actor, albumId: number, likedOnly: boolean): Promise<PhotoDto[]> {
+  const { album, role, participant } = await getAlbumAccess(albumId, actor);
+  const fullSize = canDownload(album, role);
 
   const photos = await prisma.photo.findMany({
     where: { albumId, ...(likedOnly ? { likes: { some: {} } } : {}) },
-    include: photoInclude(user.id),
+    include: photoInclude(participant.id),
     orderBy: likedOnly ? [{ likes: { _count: 'desc' } }, { uploadedAt: 'desc' }] : [{ uploadedAt: 'desc' }],
   });
 
-  return photos.map(toPhotoDto);
+  return photos.map((photo) => toPhotoDto(photo, fullSize));
 }
 
-export async function findExistingHashes(user: AuthUser, albumId: number, hashes: string[]): Promise<string[]> {
-  await getAlbumAccess(albumId, user);
+export async function findExistingHashes(actor: Actor, albumId: number, hashes: string[]): Promise<string[]> {
+  await getAlbumAccess(albumId, actor);
   if (hashes.length === 0) return [];
 
   const existing = await prisma.photo.findMany({
@@ -67,9 +68,10 @@ export async function findExistingHashes(user: AuthUser, albumId: number, hashes
   return existing.map((photo) => photo.hash);
 }
 
-export async function uploadPhotos(user: AuthUser, albumId: number, files: UploadFile[]): Promise<UploadResult> {
-  const { album } = await getAlbumAccess(albumId, user);
-  if (album.status === 'locked') {
+export async function uploadPhotos(actor: Actor, albumId: number, files: UploadFile[]): Promise<UploadResult> {
+  const { album, role, participant } = await getAlbumAccess(albumId, actor);
+  const fullSize = canDownload(album, role);
+  if (!canUpload(album, role)) {
     throw forbidden('האלבום נעול להעלאות');
   }
   if (files.length === 0) {
@@ -115,11 +117,11 @@ export async function uploadPhotos(user: AuthUser, albumId: number, files: Uploa
           originalName: name,
           width: stored.width,
           height: stored.height,
-          uploadedById: user.id,
+          uploadedById: participant.id,
         },
-        include: photoInclude(user.id),
+        include: photoInclude(participant.id),
       });
-      result.uploaded.push(toPhotoDto(photo));
+      result.uploaded.push(toPhotoDto(photo, fullSize));
     } catch (err) {
       // אילוץ הייחודיות (albumId + hash): מישהו אחר העלה את אותה תמונה באותו רגע
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
@@ -142,8 +144,8 @@ async function getPhotoInAlbum(albumId: number, photoId: number) {
   return photo;
 }
 
-export async function deletePhoto(user: AuthUser, albumId: number, photoId: number): Promise<void> {
-  const access = await getAlbumAccess(albumId, user);
+export async function deletePhoto(actor: Actor, albumId: number, photoId: number): Promise<void> {
+  const access = await getAlbumAccess(albumId, actor);
   requireOwner(access);
 
   const photo = await getPhotoInAlbum(albumId, photoId);
@@ -151,30 +153,30 @@ export async function deletePhoto(user: AuthUser, albumId: number, photoId: numb
   await deleteImages([photo.publicId]);
 }
 
-async function likeState(photoId: number, userId: number): Promise<LikeState> {
+async function likeState(photoId: number, participantId: number): Promise<LikeState> {
   const [likeCount, mine] = await Promise.all([
     prisma.photoLike.count({ where: { photoId } }),
-    prisma.photoLike.findUnique({ where: { photoId_userId: { photoId, userId } } }),
+    prisma.photoLike.findUnique({ where: { photoId_participantId: { photoId, participantId } } }),
   ]);
   return { photoId, likeCount, likedByMe: mine !== null };
 }
 
-export async function likePhoto(user: AuthUser, albumId: number, photoId: number): Promise<LikeState> {
-  await getAlbumAccess(albumId, user);
+export async function likePhoto(actor: Actor, albumId: number, photoId: number): Promise<LikeState> {
+  const { participant } = await getAlbumAccess(albumId, actor);
   await getPhotoInAlbum(albumId, photoId);
 
   await prisma.photoLike.upsert({
-    where: { photoId_userId: { photoId, userId: user.id } },
-    create: { photoId, userId: user.id },
+    where: { photoId_participantId: { photoId, participantId: participant.id } },
+    create: { photoId, participantId: participant.id },
     update: {},
   });
-  return likeState(photoId, user.id);
+  return likeState(photoId, participant.id);
 }
 
-export async function unlikePhoto(user: AuthUser, albumId: number, photoId: number): Promise<LikeState> {
-  await getAlbumAccess(albumId, user);
+export async function unlikePhoto(actor: Actor, albumId: number, photoId: number): Promise<LikeState> {
+  const { participant } = await getAlbumAccess(albumId, actor);
   await getPhotoInAlbum(albumId, photoId);
 
-  await prisma.photoLike.deleteMany({ where: { photoId, userId: user.id } });
-  return likeState(photoId, user.id);
+  await prisma.photoLike.deleteMany({ where: { photoId, participantId: participant.id } });
+  return likeState(photoId, participant.id);
 }

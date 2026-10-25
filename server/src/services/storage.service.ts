@@ -55,6 +55,18 @@ export async function deleteImages(publicIds: string[]): Promise<void> {
   }
 }
 
+/** גרסת צפייה: עד 1200 פיקסלים, בשביל משתתפים באלבום שההורדה בו כבויה */
+export function viewUrl(publicId: string): string {
+  return cloudinary.url(publicId, {
+    secure: true,
+    width: 1200,
+    height: 1200,
+    crop: 'limit',
+    fetch_format: 'auto',
+    quality: 'auto',
+  });
+}
+
 /** כתובת לתמונה ממוזערת לגלריה: 400x400, חיתוך חכם, פורמט ואיכות אוטומטיים. */
 export function thumbUrl(publicId: string): string {
   return cloudinary.url(publicId, {

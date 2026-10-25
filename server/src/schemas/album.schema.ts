@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { emailSchema } from './common.schema';
+
+export const albumCategories = ['family', 'trip', 'class', 'other'] as const;
 
 export const albumInputSchema = z.object({
   name: z.string().trim().min(1, 'שם האלבום הוא שדה חובה').max(100, 'שם האלבום ארוך מדי'),
@@ -13,10 +14,13 @@ export const albumInputSchema = z.object({
     .nullable()
     .optional()
     .transform((value) => (value ? value : null)),
-  status: z
-    .enum(['open', 'locked'], { errorMap: () => ({ message: 'סטטוס צריך להיות open או locked' }) })
-    .default('open'),
-  memberEmails: z.array(emailSchema).max(200, 'יותר מדי משתתפים').default([]),
+  category: z
+    .enum(albumCategories, { errorMap: () => ({ message: 'קטגוריה צריכה להיות family, trip, class או other' }) })
+    .default('other'),
+  // כשכבוי, משתתפים לא מקבלים את הקובץ המלא וכפתורי ההורדה מוסתרים
+  allowDownload: z.boolean({ invalid_type_error: 'allowDownload צריך להיות true או false' }).default(true),
+  // כשכבוי, משתתפים לא יכולים להעלות. המנהל תמיד יכול
+  allowUpload: z.boolean({ invalid_type_error: 'allowUpload צריך להיות true או false' }).default(true),
 });
 
 export const albumListQuerySchema = z.object({

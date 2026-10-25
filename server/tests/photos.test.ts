@@ -16,7 +16,7 @@ describe('העלאה ומניעת כפולות', () => {
     expect(res.body.uploaded).toHaveLength(1);
     expect(res.body.uploaded[0]).toMatchObject({
       originalName: 'תמונה.png',
-      uploadedBy: { id: member.id, name: 'משתתפת' },
+      uploadedBy: { id: expect.any(Number), name: 'משתתפת' },
       likeCount: 0,
       likedByMe: false,
     });
@@ -68,15 +68,22 @@ describe('העלאה ומניעת כפולות', () => {
     expect(empty.status).toBe(400);
   });
 
-  it('אי אפשר להעלות לאלבום נעול (403)', async () => {
-    const { owner, member, albumId } = await seedAlbum('locked');
-    for (const user of [owner, member]) {
+  it('כשההעלאה כבויה משתתפים מקבלים 403, והמנהלת עדיין מעלה', async () => {
+    const { owner, member, guest, albumId } = await seedAlbum(false);
+    for (const user of [member, guest]) {
       const res = await api().post(photosUrl(albumId)).set(bearer(user)).attach('photos', png(1), 'a.png');
       expect(res.status).toBe(403);
+      expect(res.body.error).toBe('האלבום נעול להעלאות');
+      const album = await api().get(`/api/albums/${albumId}`).set(bearer(user));
+      expect(album.body).toMatchObject({ allowUpload: false, canUpload: false });
     }
+    const ownerRes = await api().post(photosUrl(albumId)).set(bearer(owner)).attach('photos', png(1), 'a.png');
+    expect(ownerRes.status).toBe(201);
+    const ownerAlbum = await api().get(`/api/albums/${albumId}`).set(bearer(owner));
+    expect(ownerAlbum.body).toMatchObject({ allowUpload: false, canUpload: true });
   });
 
-  it('משתמשת שאינה באלבום לא יכולה להעלות או לצפות (403)', async () => {
+  it('משתמשת שלא הצטרפה לא יכולה להעלות או לצפות (403)', async () => {
     const { outsider, albumId } = await seedAlbum();
     expect((await api().post(photosUrl(albumId)).set(bearer(outsider)).attach('photos', png(1), 'a.png')).status).toBe(403);
     expect((await api().get(photosUrl(albumId)).set(bearer(outsider))).status).toBe(403);
@@ -127,12 +134,9 @@ describe('לייקים וסינון', () => {
     expect(liked.body.photos[0].likedByMe).toBe(true);
   });
 
-  it('אפשר לסמן לייק גם באלבום נעול', async () => {
+  it('אפשר לסמן לייק גם כשההעלאה כבויה', async () => {
     const { owner, member, albumId, ids } = await albumWithPhotos();
-    await api()
-      .put(`/api/albums/${albumId}`)
-      .set(bearer(owner))
-      .send({ name: 'בר מצווה', status: 'locked', memberEmails: [member.email] });
+    await api().put(`/api/albums/${albumId}`).set(bearer(owner)).send({ name: 'בר מצווה', allowUpload: false });
 
     const res = await api().post(`${photosUrl(albumId)}/${ids[0]}/like`).set(bearer(member));
     expect(res.status).toBe(200);
@@ -158,5 +162,36 @@ describe('מחיקת תמונה', () => {
 
     const list = await api().get(photosUrl(albumId)).set(bearer(owner));
     expect(list.body.photos).toEqual([]);
+  });
+});
+
+describe('הרשאת הורדה', () => {
+  it('כשההורדה כבויה, משתתפים מקבלים גרסת צפייה והמנהלת את הקובץ המלא', async () => {
+    const { owner, member, guest, albumId } = await seedAlbum();
+    const up = await api().post(photosUrl(albumId)).set(bearer(owner)).attach('photos', png(1), 'a.png');
+    const original = up.body.uploaded[0].url as string;
+
+    const off = await api()
+      .put(`/api/albums/${albumId}`)
+      .set(bearer(owner))
+      .send({ name: 'בר מצווה', allowDownload: false });
+    expect(off.body).toMatchObject({ allowDownload: false, canDownload: true });
+
+    for (const who of [member, guest]) {
+      const album = await api().get(`/api/albums/${albumId}`).set(bearer(who));
+      expect(album.body).toMatchObject({ allowDownload: false, canDownload: false });
+      const list = await api().get(photosUrl(albumId)).set(bearer(who));
+      expect(list.body.photos[0].url).toContain('/view/');
+      expect(list.body.photos[0].url).not.toBe(original);
+    }
+
+    const ownerList = await api().get(photosUrl(albumId)).set(bearer(owner));
+    expect(ownerList.body.photos[0].url).toBe(original);
+  });
+
+  it('ברירת המחדל: הורדה מותרת לכולם', async () => {
+    const { member, albumId } = await seedAlbum();
+    const album = await api().get(`/api/albums/${albumId}`).set(bearer(member));
+    expect(album.body).toMatchObject({ allowDownload: true, canDownload: true });
   });
 });
