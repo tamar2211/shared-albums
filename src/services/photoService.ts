@@ -35,4 +35,7 @@ async function unlikePhoto(albumId: number, photoId: number) {
     const { data } = await api.delete<LikeState>(`/albums/${albumId}/photos/${photoId}/like`);
     return data;
 }
-export const photoService = { getPhotos, checkDuplicates, uploadPhotos, likePhoto, unlikePhoto };
+async function deletePhoto(albumId: number, photoId: number) {
+    await api.delete(`/albums/${albumId}/photos/${photoId}`);
+}
+export const photoService = { deletePhoto,getPhotos, checkDuplicates, uploadPhotos, likePhoto, unlikePhoto };

@@ -7,8 +7,10 @@ type GalleryToolBarProps = {
     onSelectAll: () => void;
     onDownload: () => void;
     downloadProgress: { done: number; total: number } | null;
+    canDelete: boolean;
+    onDelete: () => void;
 }
-function GalleryToolBar({ photoCount, showPopular, onPopularChange, selectedCount, onClearSelection, onSelectAll, onDownload, downloadProgress, }: GalleryToolBarProps) {
+function GalleryToolBar({ onDelete,canDelete,photoCount, showPopular, onPopularChange, selectedCount, onClearSelection, onSelectAll, onDownload, downloadProgress, }: GalleryToolBarProps) {
     if (selectedCount > 0) {
         return (
             <div className="gallery-toolbar is-selecting">
@@ -18,6 +20,7 @@ function GalleryToolBar({ photoCount, showPopular, onPopularChange, selectedCoun
                 <button type="button" onClick={onDownload} disabled={downloadProgress !== null}>
                     {downloadProgress ? `מכין קובץ… ${downloadProgress.done}/${downloadProgress.total}` : "הורדה"}
                 </button>
+            {canDelete && <button type="button" onClick={onDelete}>מחיקה</button>}
             </div>
         );
     }
