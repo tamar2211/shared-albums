@@ -102,3 +102,5 @@ dialog::backdrop { background: rgba(15,18,25,.55); backdrop-filter: blur(4px); }
   background: var(--grad); color: #fff; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
 .progress-track { height: 6px; background: var(--primary-soft); overflow: hidden; border-radius: 999px; }
 .progress-fill { height: 100%; background: var(--grad); border-radius: 999px; transition: width .3s ease; }
+.photo-card__check { position: absolute; top: 6px; right: 6px; z-index: 2; }
+.photo-card.is-selected .photo-card__open img { outline: 3px solid #2f6fed; outline-offset: -3px; }

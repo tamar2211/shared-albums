@@ -24,7 +24,7 @@ function Album() {
       <p>דף תצוגת אלבום בודד</p>
       <p>{albumQuery.data?.name}</p>
        {albumQuery.data.canUpload && <PhotoUpload albumId={albumId} />}
-      <AlbumGallery albumId={albumId} canDownload= {albumQuery.data.canDownload}/>
+      <AlbumGallery albumName={albumQuery.data.name} albumId={albumId} canDownload= {albumQuery.data.canDownload}/>
       <Link to="/albums">חזרה לאלבומים</Link>
     </>
   )
