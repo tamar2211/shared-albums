@@ -24,7 +24,7 @@ export function uploadImage(buffer: Buffer, albumId: number): Promise<StoredImag
       {
         folder: `shared-albums/album-${albumId}`,
         resource_type: 'image',
-        transformation: [{ width: 2500, height: 2500, crop: 'limit' }],
+        transformation: [{ width: 2500, height: 2500, crop: 'limit', quality: 'auto' }],
       },
       (error, result?: UploadApiResponse) => {
         if (error || !result) {

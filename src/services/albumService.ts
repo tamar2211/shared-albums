@@ -6,4 +6,10 @@ async function  createAlbum(values:AlbumFormData)
     const { data } = await api.post<Album>("/albums", values);
     return data;
 }
-export const albumService = { createAlbum };
+async function getAlbum(albumId: number)
+{
+    const { data } = await api.get<Album>(`/albums/${albumId}`);
+    return data;
+}
+
+export const albumService = { createAlbum, getAlbum };

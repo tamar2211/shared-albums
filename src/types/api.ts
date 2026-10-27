@@ -21,14 +21,13 @@ export type LoginInput = {
   password: string;
 };
 
-export type AlbumStatus = 'open' | 'locked';
 export type AlbumCategory = 'family' | 'trip' | 'class' | 'other';
 
 export type AlbumInput = {
   name: string;
   description?: string;
   eventDate?: string | null;
-  status?: AlbumStatus;
+  allowUpload?: boolean;
   category?: AlbumCategory;
   allowDownload?: boolean;
 };
@@ -38,7 +37,8 @@ export type Album = {
   name: string;
   description: string;
   eventDate: string | null;
-  status: AlbumStatus;
+  allowUpload: boolean;
+ canUpload: boolean;
   category: AlbumCategory;
   allowDownload: boolean;
   canDownload: boolean;
@@ -73,7 +73,7 @@ export type JoinInfo = {
   name: string;
   ownerName: string;
   eventDate: string | null;
-  status: AlbumStatus;
+  allowUpload: boolean;
   photoCount: number;
   coverUrl: string | null;
 };

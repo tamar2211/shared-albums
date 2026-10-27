@@ -15,8 +15,10 @@
     "axios": "^1.20.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "react-dropzone": "^20.1.4",
     "react-hook-form": "^7.90.0",
     "react-router": "^7.18.4",
+    "yet-another-react-lightbox": "^3.32.2",
     "zod": "^4.6.7"
   },
   "devDependencies": {
