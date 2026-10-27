@@ -8,20 +8,22 @@ function Header(){
     logout();
     navigate('/');
   }
-  return(
-        <header>
-      <Link to="/">אלבןמים שיתופייים או כל שם אחר</Link>
-      {user ? (
-        <>
-          <span>שלום, {user.name}</span>
-          <button onClick={handleLogout}>התנתקות</button>
-        </>
-      ) : (
-        <Link to="/login">התחברות</Link>
-      )}
-    </header>
+  return (
+    <header className="site-header">
+      <Link to="/" className="site-logo">אלבומים משותפים</Link>
 
-  )
+      <nav className="site-nav">
+        {user && <span className="site-greeting">שלום, {user.name}</span>}
+        {user && <Link to="/albums" className="btn btn-secondary">לאלבומים שלי</Link>}
+        <Link to="/albums/new" className="btn btn-primary">פתיחת אלבום חדש</Link>
+        {user ? (
+          <button onClick={handleLogout} className="btn btn-ghost">התנתקות</button>
+        ) : (
+          <Link to="/login" className="btn btn-ghost">התחברות</Link>
+        )}
+      </nav>
+    </header>
+  );
 }
 
 export default Header

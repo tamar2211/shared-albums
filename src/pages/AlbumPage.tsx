@@ -6,7 +6,7 @@ import AlbumGallery from "../components/Album/AlbumGallery";
 import PhotoUpload from "../components/Album/PhotoUpload";
 import AlbumHeader from "../components/Album/AlbumHeader";
 import ManageAlbumModal from "../components/Album/ManageAlbumModal";
-
+   import BackLink from "../components/BackLink";
 function Album() {
   const { id } = useParams();
   const albumId = Number(id);
@@ -20,7 +20,7 @@ function Album() {
     return (
       <section>
         <p>{albumQuery.error.message}</p>
-        <Link to="/albums">חזרה לאלבומים</Link>
+        <BackLink />
       </section>
     );
   }

@@ -15,3 +15,12 @@ export const loginSchema=z.object({
 
 })
 export type LoginFormData=z.infer<typeof loginSchema>;
+export const guestJoinSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "יש להזין שם")
+    .max(50, "השם ארוך מדי (עד 50 תווים)"),
+});
+
+export type GuestJoinFormData = z.infer<typeof guestJoinSchema>;

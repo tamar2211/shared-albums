@@ -57,34 +57,6 @@ dialog::backdrop { background: rgba(15,18,25,.55); backdrop-filter: blur(4px); }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .modal-header h2 { margin: 0; }
 
-/* גלריית תמונות */
-.photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 18px; padding: 4px; }
-.photo-card { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 20px; background: var(--border);
-  box-shadow: var(--shadow); transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s; isolation: isolate; }
-.photo-card:hover { transform: translateY(-6px); box-shadow: 0 16px 36px rgba(124,77,255,.28); }
-.photo-card__open { display: block; width: 100%; height: 100%; padding: 0; border-radius: 0; background: none; }
-.photo-card__open:hover { filter: none; }
-.photo-card__open:active { transform: none; }
-.photo-card__open:focus-visible { outline-offset: -4px; }
-.photo-card img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s cubic-bezier(.2,.8,.2,1); }
-.photo-card:hover img { transform: scale(1.07); }
-.photo-card__info { position: absolute; inset: auto 0 0 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; gap: 8px;
-  padding: 36px 14px 12px; font-size: 13px; font-weight: 500; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.4);
-  background: linear-gradient(transparent, rgba(20,15,60,.75)); opacity: 0; transform: translateY(6px);
-  transition: opacity .25s, transform .25s; pointer-events: none; }
-.photo-card:hover .photo-card__info, .photo-card:focus-within .photo-card__info { opacity: 1; transform: none; }
-@media (hover: none) { .photo-card__info { opacity: 1; transform: none; } }
-.like-button { pointer-events: auto; display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; font-size: 14px; line-height: 1;
-  color: #fff; background: rgba(255,255,255,.2); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.3); }
-.like-button:hover { background: rgba(255,255,255,.35); filter: none; }
-.like-button:active { transform: scale(.9); }
-.photo-upload > div { display: grid; place-items: center; align-content: center; gap: 6px; aspect-ratio: 4 / 3; max-width: 240px;
-  margin-bottom: 20px; padding: 16px; text-align: center; color: #fff; font-weight: 500; cursor: pointer;
-  border-radius: var(--radius); background: var(--grad); box-shadow: 0 8px 24px rgba(124,77,255,.3); transition: transform .2s, filter .2s; }
-.photo-upload > div:hover { transform: translateY(-4px); filter: brightness(1.08); }
-.photo-upload > div > span:first-of-type { font-size: 2.5rem; line-height: 1; }
-.photo-upload > div[aria-disabled="true"] { opacity: .5; cursor: default; transform: none; }
-
 /* סקירת העלאה */
 .review-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 6px;
   list-style: none; padding: 0; margin: 0; max-height: 60vh; overflow-y: auto; }
@@ -102,6 +74,77 @@ dialog::backdrop { background: rgba(15,18,25,.55); backdrop-filter: blur(4px); }
   background: var(--grad); color: #fff; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
 .progress-track { height: 6px; background: var(--primary-soft); overflow: hidden; border-radius: 999px; }
 .progress-fill { height: 100%; background: var(--grad); border-radius: 999px; transition: width .3s ease; }
-.photo-card__check { position: absolute; top: 6px; right: 6px; z-index: 2; }
-.photo-card.is-selected .photo-card__open img { outline: 3px solid #2f6fed; outline-offset: -3px; }
-.album-header__meta { display: flex; flex-wrap: wrap; gap: 16px; }
+
+/* ===== דף גלריה ===== */
+/* ראש האלבום */
+.album-header { position: static; display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; align-items: end;
+  margin: 8px 0 24px; padding: 28px; border: 0; border-radius: 24px; color: #fff; backdrop-filter: none;
+  background: var(--grad); box-shadow: 0 12px 32px rgba(124,77,255,.25); }
+.album-header > * { grid-column: 1; }
+.album-header > button { grid-column: 2; grid-row: 1 / span 3; align-self: start; background: rgba(255,255,255,.2);
+  border: 1px solid rgba(255,255,255,.35); backdrop-filter: blur(8px); }
+.album-header__title { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.album-header__title h1 { margin: 0; font-size: clamp(1.6rem, 4vw, 2.4rem); color: #fff; background: none; }
+.album-header__category { padding: 2px 12px; font-size: 13px; border-radius: 999px; background: rgba(255,255,255,.22); }
+.album-header__description { margin: 0; opacity: .92; max-width: 60ch; }
+.album-header__meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 0; font-size: 13px; }
+.album-header__meta span { padding: 2px 10px; border-radius: 999px; background: rgba(0,0,0,.15); }
+
+/* סרגל כלים */
+.gallery-toolbar { position: sticky; top: 64px; z-index: 20; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 16px; padding: 8px 12px; border-radius: 999px; background: color-mix(in srgb, var(--surface) 85%, transparent);
+  backdrop-filter: blur(12px); box-shadow: var(--shadow); }
+.gallery-toolbar > span { color: var(--muted); font-size: 14px; margin-inline-end: auto; }
+.gallery-toolbar.is-selecting { background: var(--primary-soft); }
+.gallery-toolbar.is-selecting > span { color: var(--text); font-weight: 600; }
+.gallery-toolbar button { padding: 6px 14px; font-size: 14px; }
+.segmented { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--bg); }
+.segmented button { background: transparent; color: var(--muted); }
+.segmented button[aria-pressed="true"], .segmented button.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+
+/* גריד Masonry */
+.photo-grid { columns: 220px; column-gap: 14px; }
+.photo-grid > * { break-inside: avoid; margin-bottom: 14px; }
+.photo-card { position: relative; overflow: hidden; border-radius: 18px; background: var(--border); isolation: isolate;
+  box-shadow: var(--shadow); transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s; }
+.photo-card:hover { transform: translateY(-4px); box-shadow: 0 16px 36px rgba(124,77,255,.25); }
+.photo-card__open { display: block; width: 100%; padding: 0; border-radius: 0; background: none; }
+.photo-card__open:hover { filter: none; }
+.photo-card__open:active { transform: none; }
+.photo-card__open:focus-visible { outline-offset: -4px; }
+.photo-card img { width: 100%; height: auto; display: block; transition: transform .6s cubic-bezier(.2,.8,.2,1); }
+.photo-card:hover img { transform: scale(1.05); }
+.photo-card__info { position: absolute; inset: auto 0 0 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 36px 12px 10px; font-size: 13px; font-weight: 500; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.4);
+  background: linear-gradient(transparent, rgba(20,15,60,.75)); opacity: 0; transform: translateY(6px);
+  transition: opacity .25s, transform .25s; pointer-events: none; }
+.photo-card:hover .photo-card__info, .photo-card:focus-within .photo-card__info { opacity: 1; transform: none; }
+@media (hover: none) { .photo-card__info { opacity: 1; transform: none; } }
+
+/* בחירה */
+.photo-card__check { position: absolute; top: 10px; right: 10px; z-index: 2; width: 26px; height: 26px; padding: 0;
+  border-radius: 50%; border: 2px solid #fff; background: rgba(0,0,0,.25); box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+.photo-card.is-selected { transform: scale(.94); box-shadow: 0 0 0 3px var(--primary); }
+.photo-card.is-selected .photo-card__check { background: var(--primary); border-color: var(--primary); }
+.photo-card.is-selected img { opacity: .85; }
+
+/* לייק */
+.like-button { pointer-events: auto; display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; font-size: 14px; line-height: 1;
+  color: #fff; background: rgba(255,255,255,.2); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.3); }
+.like-button:hover { background: rgba(255,255,255,.35); filter: none; }
+.like-button:active { transform: scale(.85); }
+
+/* אריח העלאה */
+.photo-upload > div { display: grid; place-items: center; align-content: center; gap: 6px; aspect-ratio: 4 / 3; max-width: 260px;
+  margin-bottom: 20px; padding: 16px; text-align: center; color: #fff; font-weight: 500; cursor: pointer;
+  border-radius: 18px; background: var(--grad); box-shadow: 0 8px 24px rgba(124,77,255,.3); transition: transform .2s, filter .2s; }
+.photo-grid .photo-upload > div { max-width: none; margin: 0; }
+.photo-upload > div:hover { transform: translateY(-4px); filter: brightness(1.08); }
+.photo-upload > div > span:first-of-type { font-size: 2.5rem; line-height: 1; }
+.photo-upload > div[aria-disabled="true"] { opacity: .5; cursor: default; transform: none; }
+
+/* תצוגה מלאה (yet-another-react-lightbox) */
+.yarl__root { --yarl__color_backdrop: rgba(10, 10, 20, .94); }
+.yarl__slide_image { border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+.yarl__button { background: none; padding: 8px; border-radius: 50%; filter: none; }
+.yarl__button:hover { background: rgba(255,255,255,.12); }
