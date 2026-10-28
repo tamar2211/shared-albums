@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { albumService } from "../services/albumService";
 import AlbumGallery from "../components/Album/AlbumGallery";
@@ -41,7 +41,7 @@ function Album() {
           onClose={() => setIsManageOpen(false)}
         />
       )}
-      <Link className="back-link" to="/albums">חזרה לאלבומים</Link>
+      <BackLink />
     </>
   );
 }

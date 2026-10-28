@@ -65,6 +65,7 @@
   --i-minus: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12h12'/%3E%3C/svg%3E");
   --i-dup: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='8' y='8' width='13' height='13' rx='2'/%3E%3Cpath d='M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3M11.5 14.5l2 2 4-4.5'/%3E%3C/svg%3E");
   --i-party: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20l5-13 8 8-13 5z'/%3E%3Cpath d='M14 4c.5 1.5 0 3-1 4M20 10c-1.5-.5-3 0-4 1M17 3l.5 1.5M21 7l-1.5.5'/%3E%3C/svg%3E");
+  --i-alert: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7.5v5.2M12 16.3v.2'/%3E%3C/svg%3E");
   --i-spark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6'/%3E%3C/svg%3E");
 
   color-scheme: light;
@@ -212,10 +213,20 @@ input[aria-invalid="true"], .field:has(.field-error) input, .field:has(.field-er
   min-height: 40vh; margin: 0; padding: 40px 0; text-align: center; color: var(--graphite); font-size: 15px; }
 .page-status::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--brand); animation: status-ping 1.4s var(--ease) infinite; }
 @keyframes status-ping { 0% { box-shadow: 0 0 0 0 rgba(51,85,255,.45); scale: .9; } 50% { scale: 1.15; } 100% { box-shadow: 0 0 0 18px rgba(51,85,255,0); scale: .9; } }
-.page-status:has(p)::before { display: none; }           /* מצב שגיאה: בלי ספינר */
-.page-status--error::before { display: none; }
 .page-status--error { color: var(--ink); font-size: 16px; }
+/* מצב שגיאה: במקום הנקודה המהבהבת, אייקון שקט בעיגול. כך השגיאה נראית כמו מסך מתוכנן ולא כמו דף ריק */
+.page-status:has(p)::before, .page-status--error::before {
+  width: 56px; height: 56px; border-radius: 50%; animation: page-in .6s var(--ease) both;
+  background: var(--i-alert) center / 26px no-repeat, var(--mist); box-shadow: none; scale: 1; }
+.page-status:has(p) { gap: 14px; }
+.page-status:has(p) .back-link { margin-top: 4px; padding: 8px 14px; border-radius: 999px; background: var(--mist); color: var(--ink-2); }
+.page-status:has(p) .back-link:hover { background: var(--mist-2); color: var(--ink); }
 .gallery-loading { min-height: 30vh; }
+/* טעינת התמונות: שלד רך שממלא את המשך השורה ליד אריח ההעלאה, במקום נקודה מנותקת מתחתיו */
+#root:has(> .album-header) > .gallery-loading { grid-column: 1 / -1; align-self: stretch; min-height: 240px; padding: 0; border-radius: 14px;
+  background: linear-gradient(100deg, var(--mist) 35%, #fafafb 50%, var(--mist) 65%) 0 0 / 300% 100%; animation: skeleton 1.6s linear infinite; }
+#root:has(> .album-header):has(> .photo-upload) > .gallery-loading { grid-column: 2 / -1; }
+@keyframes skeleton { from { background-position: 100% 0; } to { background-position: 0 0; } }
 .participants-status { display: flex; align-items: center; gap: 10px; min-height: 52px; margin: 0; font-size: 14px; color: var(--graphite); }
 .participants-status:not(.form-error)::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); animation: status-ping 1.4s var(--ease) infinite; }
 .page-status p { margin: 0; font-size: 16px; color: var(--ink); }
@@ -486,7 +497,7 @@ dialog:has(> .confirm-text) > .btn { min-height: 44px; padding: 0 20px; }
 
 /* ---- איך זה עובד ---- */
 .landing-steps { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; margin: 0; padding: 8px 0 0; list-style: none; counter-reset: step; }
-.landing-steps::before, .landing-steps::after { content: ""; position: absolute; top: 27px; inset-inline: 20px; height: 2px; background: var(--line); }
+.landing-steps::before, .landing-steps::after { content: ""; position: absolute; top: 27px; inset-inline-start: 20px; inset-inline-end: calc((100% - 64px) / 3 - 20px); height: 2px; background: var(--line); }
 .landing-steps::after { background: var(--brand); transform-origin: right; transform: scaleX(0); }
 .reveal:not(.is-waiting) .landing-steps::after { animation: steps-fill 1.6s var(--ease) .2s forwards; }
 @keyframes steps-fill { to { transform: scaleX(1); } }
@@ -544,6 +555,9 @@ dialog:has(> .confirm-text) > .btn { min-height: 44px; padding: 0 20px; }
   grid-template-rows: auto 1fr repeat(5, auto) 1fr; min-height: 100vh;
 }
 #root:has(> .auth-toggle) > .site-header { grid-column: 1 / -1; }
+/* בדף ההתחברות הכפתור "התחברות" בכותרת מיותר */
+#root:has(> .auth-toggle) .site-nav a[href="/login"] { display: none; }
+#root:has(> .auth-toggle) .site-nav a[href="/albums/new"] { margin-inline-start: auto; }
 #root:has(> .auth-toggle) > :not(.site-header) { grid-column: 1; justify-self: center; width: min(400px, 100%); }
 #root:has(> .auth-toggle) > .back-link { grid-row: 3; margin-bottom: 36px; }
 #root:has(> .auth-toggle) > .page-title { grid-row: 4; margin-bottom: 30px; font-size: clamp(1.9rem, 2.6vw, 2.3rem); }
@@ -587,7 +601,9 @@ dialog:has(> .confirm-text) > .btn { min-height: 44px; padding: 0 20px; }
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b6b73' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M20 20l-4.2-4.2'/%3E%3C/svg%3E"); }
 .album-search { border-radius: 14px; transition: background-color .2s, box-shadow .2s, width .4s var(--ease); }
 .album-search:focus { background-color: #fff; }
-.album-search::-webkit-search-cancel-button { cursor: pointer; }
+.album-search::-webkit-search-cancel-button { -webkit-appearance: none; width: 16px; height: 16px; cursor: pointer; background: var(--graphite);
+  -webkit-mask: var(--i-x) center / contain no-repeat; mask: var(--i-x) center / contain no-repeat; }
+.album-search::-webkit-search-cancel-button:hover { background: var(--ink); }
 .album-search-empty { display: flex; align-items: center; gap: 10px; margin: 28px 0 -8px; font-size: 15px; color: var(--graphite); }
 .album-search-empty::before { content: ""; width: 18px; height: 18px; background: currentColor; -webkit-mask: var(--i-search) center / contain no-repeat; mask: var(--i-search) center / contain no-repeat; }
 
@@ -658,7 +674,10 @@ dialog:has(> .confirm-text) > .btn { min-height: 44px; padding: 0 20px; }
 #root:has(> .page-title + .join-link__input) > .page-title::after { content: "שלחו את הקישור למשתתפים כדי שיצטרפו ויעלו תמונות."; display: block; margin-top: 12px; font-size: 15px; font-weight: 400; letter-spacing: 0; color: var(--graphite); }
 #root:has(> .page-title + .join-link__input) > .join-link__input { grid-column: 1; margin: 28px 0 0 8px; }
 #root:has(> .page-title + .join-link__input) > .join-link__copy { grid-column: 2; margin-top: 28px; }
-#root:has(> .page-title + .join-link__input) > .btn-primary:not(.site-header) { width: auto; justify-self: center; margin-top: 30px; min-height: 46px; padding: 0 26px; }
+#root:has(> .page-title + .join-link__input) > .btn-primary:not(.site-header) { width: auto; justify-self: center; margin-top: 30px; min-height: 46px; padding: 0 26px;
+  color: var(--ink); background: var(--paper); border-color: var(--line); box-shadow: none; }
+/* הפעולה העיקרית במסך הזה היא שיתוף הקישור, לכן "לאלבום" משני */
+#root:has(> .page-title + .join-link__input) > .btn-primary:not(.site-header):hover { color: var(--ink); background: #fafafb; border-color: var(--line-2); transform: none; box-shadow: none; }
 #root:has(> .page-title + .join-link__input) > .btn-primary::after { content: ""; width: 16px; height: 16px; background: currentColor; -webkit-mask: var(--i-chev) center / contain no-repeat; mask: var(--i-chev) center / contain no-repeat; rotate: 180deg; }
 /* וי לבן בתוך העיגול */
 #root:has(> .page-title + .join-link__input) > .page-title::before { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 30px no-repeat, var(--grad); }
@@ -792,6 +811,8 @@ dialog:has(> .confirm-text) > .btn { min-height: 44px; padding: 0 20px; }
   font-size: 12.5px; font-weight: 500; color: var(--ink); background: rgba(255,255,255,.86); backdrop-filter: blur(12px) saturate(1.6); -webkit-backdrop-filter: blur(12px) saturate(1.6);
   border-radius: 999px; box-shadow: 0 1px 2px rgba(0,0,0,.08); pointer-events: none; transition: transform .35s var(--ease); }
 .photo-card:hover .photo-card__info { transform: translateY(-2px); }
+.photo-card__info { transition: transform .35s var(--ease), bottom .3s var(--ease), left .3s var(--ease); }
+.photo-card.is-selected .photo-card__info { bottom: calc(6% + 8px); left: calc(6% + 8px); }
 .like-button { pointer-events: auto; min-height: 0; height: 22px; padding: 0 8px; gap: 4px; font-size: 12.5px; font-weight: 500; color: var(--ink-2); background: transparent; border: 0; border-radius: 999px; font-variant-numeric: tabular-nums; }
 .like-button:hover { background: rgba(0,0,0,.06); border: 0; }
 .like-button:active { transform: scale(.86); }
@@ -808,7 +829,7 @@ dialog:has(> .confirm-text) > .btn { min-height: 44px; padding: 0 20px; }
 .photo-card__check:hover::before { opacity: .7; }
 .photo-card.is-selected { border-radius: 18px; background: var(--brand-soft); }
 .photo-card.is-selected::after { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: inherit; pointer-events: none;
-  background: rgba(51,85,255,.06); box-shadow: inset 0 0 0 1.5px rgba(51,85,255,.35); }
+  background: rgba(51,85,255,.06); }
 .photo-card.is-selected img { transform: scale(.88); border-radius: 11px; }
 .photo-card.is-selected .photo-card__check { background: var(--brand); border-color: #fff; transform: scale(1.1); }
 .photo-card.is-selected .photo-card__check::before { opacity: 1; }
@@ -839,6 +860,11 @@ dialog:has(> .confirm-text) > .btn { min-height: 44px; padding: 0 20px; }
 .gallery-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 280px; margin: 0;
   font-size: 15px; color: var(--graphite); text-align: center; border-top: 1px solid var(--line); }
 .gallery-empty::before { content: ""; width: 40px; height: 40px; background: #c2c2c9; -webkit-mask: var(--i-img) center / contain no-repeat; mask: var(--i-img) center / contain no-repeat; animation: page-in .7s var(--ease) both; }
+/* שגיאה בטעינת התמונות: אייקון התראה במקום אייקון התמונה, כדי שלא תיראה כמו אלבום ריק */
+.gallery-empty:has(p)::before { width: 34px; height: 34px; background: #a8a8b0; -webkit-mask: var(--i-alert) center / contain no-repeat; mask: var(--i-alert) center / contain no-repeat; }
+.gallery-empty p { margin: 0; color: var(--ink); }
+/* המנהל באלבום ריק: הזמנה לפעולה מתחת להודעה */
+#root:has(.album-manage):has(> .photo-upload) > .gallery-empty:not(:has(p))::after { content: "גררו תמונות לאריח, או שתפו את קישור ההצטרפות מ״ניהול אלבום״."; max-width: 34ch; font-size: 13.5px; color: #8a8a93; }
 #root:has(> .album-header):has(> .photo-upload) > .gallery-empty { grid-column: auto / span 2; min-height: 0; aspect-ratio: auto; align-items: flex-start; padding-inline-start: 12px; border: 0; }
 
 /* ===================================================================
@@ -923,6 +949,8 @@ dialog:has(> .confirm-text) > .form-error { flex-basis: 100%; margin-bottom: 6px
 
 .participants-list { display: flex; flex-direction: column; max-height: 260px; margin: 0; padding: 0; overflow-y: auto; list-style: none; scrollbar-width: none; }
 .participants-list::-webkit-scrollbar { display: none; }
+/* יותר משתתפים ממה שנכנס: דהייה בתחתית מראה שיש עוד למטה */
+.participants-list:has(> li:nth-child(6)) { padding-bottom: 28px; -webkit-mask: linear-gradient(#000 calc(100% - 36px), transparent); mask: linear-gradient(#000 calc(100% - 36px), transparent); }
 .participants-list li { display: grid; grid-template-columns: minmax(0, 1fr) 104px 72px 60px; align-items: center; column-gap: 12px; min-height: 52px; padding-inline: 6px; border-radius: 10px; transition: background .2s; }
 .participants-list li:hover { background: var(--mist); }
 .participants-list li + li { border-top: 1px solid var(--line); }
@@ -955,11 +983,15 @@ dialog:has(> .confirm-text) > .form-error { flex-basis: 100%; margin-bottom: 6px
 .join-card::before { content: ""; position: absolute; inset: 0 0 auto 0; z-index: -1; height: 150px;
   background: linear-gradient(to bottom, rgba(255,255,255,0) 30%, #fff), url("https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=1000&q=72&auto=format&fit=crop") center 40% / cover, var(--mist); animation: join-zoom 14s ease-in-out infinite alternate; }
 @keyframes join-zoom { to { background-size: auto, 112%, auto; } }
+/* התמונה נמוגה לתוך הכרטיס בלי קו חד בקצה */
+.join-card::before { -webkit-mask: linear-gradient(#000 45%, transparent); mask: linear-gradient(#000 45%, transparent); }
 .join-card::after { content: ""; position: absolute; top: 76px; left: 50%; translate: -50% 0; width: 72px; height: 72px; border-radius: 22px;
   background: radial-gradient(circle, var(--brand) 0 9px, rgba(51,85,255,.35) 10px, transparent 17px), var(--ink);
   box-shadow: 0 0 0 6px rgba(255,255,255,.9), 0 18px 36px -14px rgba(16,16,24,.55); animation: success-pop .8s var(--spring) .15s both; }
 .join-title { margin: 0 0 28px; font-size: 1.6rem; font-weight: 600; line-height: 1.3; letter-spacing: -.025em; text-wrap: balance; }
 .join-card form { text-align: start; }
+/* אורח מוזמן: בכותרת רק הלוגו, בלי "פתיחת אלבום" ו"התחברות" שמסיחים מההצטרפות */
+#root:has(> .join-card) .site-nav { display: none; }
 .join-card > .btn-primary { width: 100%; min-height: 48px; font-size: 15px; }
 .join-card .form-error { margin-top: 14px; }
 
@@ -1028,7 +1060,11 @@ dialog:has(> .confirm-text) > .form-error { flex-basis: 100%; margin-bottom: 6px
   .album-header__meta { flex-basis: 100%; margin-top: 6px; }
   .album-header__category::after { display: none; }
   .photo-card { border-radius: 6px; }
-  .photo-card__info { display: none; }
+  /* בטלפון: רק הלב והמספר, בלי שם המעלה, כדי שאפשר יהיה לסמן לייק גם במסך צר */
+  .photo-card__info { inset: auto auto 6px 6px; height: 24px; padding: 0 2px; font-size: 0; }
+  .photo-card__info .like-button { height: 20px; padding: 0 6px; font-size: 11.5px; }
+  .photo-card.is-selected .photo-card__info { bottom: calc(6% + 4px); left: calc(6% + 4px); }
+  .photo-card__check { top: 6px; right: 6px; width: 22px; height: 22px; border-width: 1.5px; background: rgba(16,16,24,.12); box-shadow: none; }
   .upload-tile { border-radius: 6px; gap: 6px; padding: 6px; }
   .upload-tile__icon { width: 40px; height: 40px; }
   .upload-tile__icon::before { width: 20px; height: 20px; }
@@ -1042,5 +1078,7 @@ dialog:has(> .confirm-text) > .form-error { flex-basis: 100%; margin-bottom: 6px
   .review-footer { flex-wrap: wrap; margin: 16px -20px -22px; padding: 14px 20px; }
   .review-summary { flex-basis: 100%; }
   .upload-progress, .upload-progress-mini { left: 16px; bottom: 16px; }
-  .join-card { padding: 100px 22px 26px; }
+  .join-card { padding: 136px 22px 26px; }
+  .join-card::before { height: 118px; }
+  .join-card::after { top: 54px; width: 60px; height: 60px; border-radius: 18px; }
 }

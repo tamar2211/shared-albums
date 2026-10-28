@@ -8,8 +8,6 @@ type PhotoCardProps = {
     onToggleSelect: () => void;
 }
 function PhotoCard({ photo, onOpen, selectable, isSelected, onToggleSelect }: PhotoCardProps) {
-    console.log("thumbUrl:", photo.thumbUrl);
-    console.log("originalName:", photo.originalName);
     return (
         <div className={isSelected ? "photo-card is-selected" : "photo-card"}>
             {selectable && (
