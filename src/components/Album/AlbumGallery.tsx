@@ -29,11 +29,11 @@ function AlbumGallery({ albumId, canDownload, albumName, isOwner }: AlbumGallery
     const deleter = usePhotoDelete(albumId);
 
     if (photosQuery.isPending) {
-        return <section>טוען תמונות</section>;
+        return <section className="page-status gallery-loading">טוען תמונות</section>;
     }
     if (photosQuery.isError) {
         return (
-            <section>
+            <section className="gallery-empty">
                 <p>{photosQuery.error.message}</p>
             </section>
         );
@@ -42,7 +42,7 @@ function AlbumGallery({ albumId, canDownload, albumName, isOwner }: AlbumGallery
     const photos = photosQuery.data;
 
     if (photos.length === 0) {
-        return <section>עוד אין תמונות באלבום</section>;
+        return <section className="gallery-empty">עוד אין תמונות באלבום</section>;
     }
 
     const visiblePhotos = showPopular
@@ -86,8 +86,11 @@ function AlbumGallery({ albumId, canDownload, albumName, isOwner }: AlbumGallery
                 canDelete={isOwner}
                 onDelete={() => setIsConfirmDeleteOpen(true)}
             />
-            {downloader.message && <p>{downloader.message}</p>}
-            {deleter.message && <p>{deleter.message}</p>}
+            {downloader.message && <p className="gallery-message">{downloader.message}</p>}
+            {deleter.message && <p className="gallery-message">{deleter.message}</p>}
+            {showPopular && visiblePhotos.length === 0 && (
+                <p className="gallery-popular-empty">עוד אין תמונות עם לייקים. סמנו לייק על התמונות שאהבתם</p>
+            )}
             <PhotoGrid
                 photos={visiblePhotos}
                 onOpen={handlePhotoClick}
@@ -106,11 +109,11 @@ function AlbumGallery({ albumId, canDownload, albumName, isOwner }: AlbumGallery
                 onClose={() => setIsConfirmDeleteOpen(false)}
                 title="מחיקת תמונות"
             >
-                <p>למחוק {selection.count} תמונות? לא ניתן לבטל את הפעולה.</p>
-                <button type="button" onClick={() => setIsConfirmDeleteOpen(false)}>
+                <p className="confirm-text">למחוק {selection.count} תמונות? לא ניתן לבטל את הפעולה.</p>
+                <button className="btn btn-secondary" type="button" onClick={() => setIsConfirmDeleteOpen(false)}>
                     ביטול
                 </button>
-                <button type="button" onClick={handleDelete} disabled={deleter.isDeleting}>
+                <button className="btn btn-danger" type="button" onClick={handleDelete} disabled={deleter.isDeleting}>
                     {deleter.isDeleting ? "מוחק…" : "מחיקה"}
                 </button>
             </Modal>

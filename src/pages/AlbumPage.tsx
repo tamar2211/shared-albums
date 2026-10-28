@@ -14,11 +14,11 @@ function Album() {
   const [isManageOpen, setIsManageOpen] = useState(false);
 
   if (albumQuery.isPending) {
-    return <section>טוען אלבום...</section>;
+    return <section className="page-status">טוען אלבום...</section>;
   }
   if (albumQuery.isError) {
     return (
-      <section>
+      <section className="page-status">
         <p>{albumQuery.error.message}</p>
         <BackLink />
       </section>
@@ -41,7 +41,7 @@ function Album() {
           onClose={() => setIsManageOpen(false)}
         />
       )}
-      <Link to="/albums">חזרה לאלבומים</Link>
+      <Link className="back-link" to="/albums">חזרה לאלבומים</Link>
     </>
   );
 }

@@ -23,12 +23,12 @@ function JoinLink({joinCode,onRegenerate}:JoinLinkProps)
     }
    return(
         <>
-        <input readOnly value={link} />
-                <button type="button" onClick={handleCopy}>
+        <input className="join-link__input" readOnly value={link} />
+                <button className="join-link__copy" type="button" onClick={handleCopy}>
             {copied ? "הועתק!" : "העתק"}
         </button>
         {onRegenerate && (
-            <button type="button" onClick={handleRegenerate}>
+            <button className="join-link__regen" type="button" onClick={handleRegenerate}>
                 קישור חדש
             </button>
               )}

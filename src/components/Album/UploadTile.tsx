@@ -29,12 +29,12 @@ function UploadTile({ onFiles, disabled = false }: UploadTileProps) {
 
     return (
         <>
-            <div {...getRootProps()} aria-disabled={disabled}>
+            <div className="upload-tile" {...getRootProps()} aria-disabled={disabled}>
                 <input {...getInputProps()} />
-                <span aria-hidden="true">+</span>
-                <span>{label}</span>
+                <span className="upload-tile__icon" aria-hidden="true">+</span>
+                <span className="upload-tile__label">{label}</span>
             </div>
-            {message && <p>{message}</p>}
+            {message && <p className="upload-tile__message">{message}</p>}
         </>
     );
 }

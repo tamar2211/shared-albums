@@ -32,10 +32,10 @@ export default function LoginForm() {
             <FormField label="סיסמה" id="password" error={errors.password?.message}>
             <input id="password" type="password" autoComplete="current-password" {...register("password")} />
             </FormField>
-            <button type="submit" disabled={loginMutation.isPending}>
+            <button className="btn btn-primary form-submit" type="submit" disabled={loginMutation.isPending}>
              {loginMutation.isPending ? "מתחבר..." : "התחברות"}
             </button>
-            {loginMutation.isError && <p>{loginMutation.error.message}</p>}
+            {loginMutation.isError && <p className="form-error">{loginMutation.error.message}</p>}
         </form>
     );
 }

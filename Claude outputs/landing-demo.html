@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>הדמיית דף נחיתה</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,"Segoe UI",Arial,sans-serif;background:#f4f4f6;color:#1a1a1a;padding:16px}
+.lp{max-width:900px;margin:0 auto;background:#fff;border:1px solid #e3e3e8;border-radius:14px;overflow:hidden}
+.sec{padding:32px 24px;border-top:1px solid #eee}
+.muted{color:#666;margin:6px 0 0;font-size:14px}
+.btn1,.btn2{font:inherit;font-size:14px;padding:9px 16px;border-radius:8px;cursor:pointer}
+.btn1{background:#1a1a1a;color:#fff;border:none}
+.btn2{background:#fff;border:1px solid #ccc}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.card{border:1px solid #e3e3e8;border-radius:12px;padding:16px}
+.dot{width:9px;height:9px;border-radius:50%;background:#d0d0d6}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;padding:10px}
+.tiles div{aspect-ratio:1;border-radius:5px}
+.step{width:32px;height:32px;border-radius:50%;border:1px solid #bbb;margin:0 auto 8px;line-height:32px}
+.note{font-size:12px;color:#999}
+@media (max-width:600px){.g3{grid-template-columns:1fr}.hdr-right{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="lp">
+
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 24px;gap:12px;flex-wrap:wrap">
+  <div style="font-weight:600">📷 אלבומים משותפים</div>
+  <div class="hdr-right" style="display:flex;align-items:center;gap:8px">
+    <span class="muted" style="margin:0">שלום, תמר</span>
+    <button class="btn2">לאלבומים שלי</button>
+    <button class="btn1">פתיחת אלבום חדש</button>
+  </div>
+</div>
+
+<div class="sec" style="text-align:center;padding:48px 24px">
+  <h1 style="margin:0;font-size:30px">אלבומים משותפים. כל הרגעים במקום אחד.</h1>
+  <p class="muted" style="font-size:17px;margin:10px 0 20px">אלבום משותף לאירוע: כל המשתתפים מעלים תמונות למקום אחד, בלי כפילויות.</p>
+  <div style="display:flex;gap:8px;justify-content:center">
+    <button class="btn1">פתיחת אלבום חדש</button>
+    <button class="btn2">לאלבומים שלי</button>
+  </div>
+
+  <div style="margin:32px auto 0;max-width:520px;border:1px solid #d6d6dc;border-radius:12px;overflow:hidden;text-align:right">
+    <div style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid #eee">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="note" style="margin-right:8px">טיול שנתי · 24 תמונות</span>
+    </div>
+    <div class="tiles">
+      <div style="background:#22c3d6"></div><div style="background:#8b5cf6"></div><div style="background:#e0409b"></div><div style="background:#f7931e"></div>
+      <div style="background:#9bd13a"></div><div style="background:#5b8def"></div><div style="background:#f25c7a"></div><div style="background:#14b8a6"></div>
+    </div>
+  </div>
+  <p class="note">כאן יופיעו תמונות נוף אמיתיות</p>
+</div>
+
+<div class="sec">
+  <div class="g3">
+    <div class="card"><div style="font-size:22px">🔁</div><div style="font-weight:600;margin-top:6px">בלי כפילויות</div><p class="muted">תמונה שכבר הועלתה מדולגת אוטומטית</p></div>
+    <div class="card"><div style="font-size:22px">🔗</div><div style="font-weight:600;margin-top:6px">הצטרפות בקישור</div><p class="muted">המשתתפים נכנסים עם שם בלבד, בלי הרשמה</p></div>
+    <div class="card"><div style="font-size:22px">⬇️</div><div style="font-weight:600;margin-top:6px">הורדה בלחיצה</div><p class="muted">כל התמונות בקובץ ZIP אחד</p></div>
+  </div>
+</div>
+
+<div class="sec">
+  <div style="font-weight:600;font-size:18px;text-align:center;margin-bottom:16px">איך זה עובד</div>
+  <div class="g3" style="text-align:center">
+    <div><div class="step">1</div>פתיחת אלבום</div>
+    <div><div class="step">2</div>שיתוף קישור</div>
+    <div><div class="step">3</div>העלאת תמונות</div>
+  </div>
+</div>
+
+<div class="sec" style="text-align:center;background:#f7f7f9">
+  <div style="font-weight:600;font-size:20px;margin-bottom:14px">כל התמונות מהאירוע, במקום אחד.</div>
+  <button class="btn1">פתיחת אלבום חדש</button>
+</div>
+
+<div class="sec" style="display:flex;justify-content:space-between;padding:14px 24px">
+  <span class="muted" style="margin:0">אלבומים משותפים · 2026</span>
+  <span class="muted" style="margin:0">פתיחת אלבום</span>
+</div>
+
+</div>
+</body>
+</html>

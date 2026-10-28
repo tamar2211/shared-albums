@@ -33,4 +33,8 @@ async function getParticipants(albumId: number) {
 async function removeParticipant(albumId: number, participantId: number) {
     await api.delete(`/albums/${albumId}/participants/${participantId}`);
 }
-export const albumService = { createAlbum, getAlbum, getAlbums, updateAlbum, regenerateJoinCode, getParticipants, removeParticipant };
+// מחיקת אלבום (למנהל בלבד). השרת מוחק גם את התמונות, המשתתפים והלייקים, ומחזיר 204 בלי גוף
+async function deleteAlbum(albumId: number) {
+    await api.delete(`/albums/${albumId}`);
+}
+export const albumService = { createAlbum, getAlbum, getAlbums, updateAlbum, deleteAlbum, regenerateJoinCode, getParticipants, removeParticipant };

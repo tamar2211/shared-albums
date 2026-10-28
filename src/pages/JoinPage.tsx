@@ -25,13 +25,13 @@ export default function JoinPage() {
       navigate(`/albums/${result.albumId}`, { replace: true });
     },
   });
-  if (joinQuery.isPending || isLoading) return <p>טוען...</p>;
+  if (joinQuery.isPending || isLoading) return <p className="page-status">טוען...</p>;
 
   if (joinQuery.isError)
     return (
-      <div>
+      <div className="page-status">
         <p>{joinQuery.error.message}</p>
-        <Link to="/">לדף הבית</Link>
+        <Link className="back-link" to="/">לדף הבית</Link>
       </div>
     );
 
@@ -41,13 +41,13 @@ export default function JoinPage() {
     return( <Navigate replace to={`/albums/${info.albumId}`}/>)
   }
    return (
-    <div>
-      <h1>
+    <div className="join-card">
+      <h1 className="join-title">
         הוזמנת לאלבום {info.name} של {info.ownerName}
       </h1>
 
       {user ? (
-        <button onClick={() => joinMutation.mutate(undefined)} disabled={joinMutation.isPending}>
+        <button className="btn btn-primary" onClick={() => joinMutation.mutate(undefined)} disabled={joinMutation.isPending}>
           כניסה לאלבום
         </button>
       ) : (
@@ -57,7 +57,7 @@ export default function JoinPage() {
         />
       )}
 
-      {joinMutation.isError && <p>{joinMutation.error.message}</p>}
+      {joinMutation.isError && <p className="form-error">{joinMutation.error.message}</p>}
     </div>
   );
 }

@@ -1,32 +1,66 @@
-# React + TypeScript + Vite
+# .pixx · Everyone’s in
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+אלבום תמונות משותף לאירועים. משתמש רשום פותח אלבום ושולח קישור, וכל מי שמקבל את הקישור מצטרף עם שם בלבד ומעלה את התמונות שלו. תמונה שכבר נמצאת באלבום מזוהה ולא מועלית שוב.
 
-Currently, two official plugins are available:
+- **האתר:** _(כתובת הלקוח ב-Render)_
+- **השרת:** https://shared-albums.onrender.com/api · תיעוד ה-API ב-`/api-docs`
+- **קוד השרת:** בתיקייה `server` (ראו `server/README.md`)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## מה אפשר לעשות
 
-## React Compiler
+| | |
+|---|---|
+| **התחברות והרשמה** | דף אחד עם מעבר בין התחברות להרשמה, ולידציה לכל שדה |
+| **האלבומים שלי** | כל האלבומים שפתחתי ושותפו איתי, עם חיפוש לפי שם |
+| **פתיחת אלבום** | שם, תיאור, תאריך, קטגוריה, והרשאות העלאה והורדה למשתתפים. בסיום מוצג קישור ההצטרפות |
+| **הצטרפות בקישור** | אורח נכנס עם שם לתצוגה בלבד, ומשתמש מחובר מצטרף בלחיצה |
+| **גלריה** | העלאה בגרירה או בבחירה, לייקים, סינון לפי פופולריות, תצוגה מלאה |
+| **מניעת כפילויות** | לפני ההעלאה מחושב SHA-256 לכל קובץ, ותמונה שכבר באלבום מדולגת |
+| **בחירה והורדה** | בחירת תמונות או "בחר הכל". תמונה אחת יורדת כקובץ, וכמה תמונות כ-ZIP |
+| **ניהול (למנהל בלבד)** | עריכת הפרטים, קישור חדש, הסרת משתתפים, מחיקת תמונות ומחיקת האלבום |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## משתמשים והרשאות
 
-## Expanding the Oxlint configuration
+| | מנהל האלבום | משתתף |
+|---|---|---|
+| צפייה ולייקים | כן | כן |
+| העלאה | תמיד | רק כשהמנהל מאפשר |
+| הורדה | תמיד | רק כשהמנהל מאפשר |
+| עריכה, קישור חדש, משתתפים, מחיקה | כן | לא |
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+כל בדיקת הרשאה נעשית גם בשרת, ולא רק בהסתרת כפתורים.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+## טכנולוגיות
+
+React 19 + TypeScript (Vite) · React Router · React Hook Form + Zod · TanStack React Query · Context (AuthContext) · axios · react-dropzone · yet-another-react-lightbox · JSZip
+
+שרת: Node + Express + Prisma · PostgreSQL ב-Neon · תמונות ב-Cloudinary · פריסה ב-Render
+
+## מבנה התיקיות
+
+```
+src/
+  pages/          דף לכל כתובת: נחיתה, התחברות, האלבומים שלי, אלבום חדש, אלבום, הצטרפות
+  components/     קומפוננטות לפי נושא: Album, Auth, Landing, ורכיבים משותפים (Modal, FormField...)
+  hooks/          לוגיקה לשימוש חוזר: העלאה, הורדה, מחיקה, בחירה, אזהרה לפני יציאה
+  context/        AuthContext: המשתמש המחובר
+  services/       כל הקריאות לשרת (axios), ושמירת הטוקנים
+  utils/          לוגיקה שאינה React: hash, ZIP, סימון כפולים, הרצה במקביל
+  types/          הטיפוסים של מה שהשרת מחזיר
+  routes.tsx      הניתוב, כולל דפים מוגנים
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## הרצה מקומית
+
+```bash
+npm install
+npm run dev        # http://localhost:5173
+```
+
+כתובת השרת מוגדרת ב-`.env.development` (`VITE_API_URL=http://localhost:4000/api`). להרצת השרת ראו `server/README.md`.
+
+## פריסה
+
+- **שרת:** Render Web Service לפי `server/render.yaml`. במשתנה `CORS_ORIGINS` צריך להופיע הכתובת של הלקוח.
+- **לקוח:** Render Static Site. פקודת בנייה `npm install && npm run build`, תיקיית פרסום `dist`.
+  - חובה להוסיף ב-Redirects/Rewrites כלל: `/*` → `/index.html` (Rewrite), אחרת רענון בכתובת כמו `/albums/7` מחזיר 404.

@@ -5,9 +5,9 @@ function BackLink() {
   const { user } = useAuth();
 
   return user ? (
-    <Link to="/albums">חזרה לאלבומים</Link>
+    <Link className="back-link" to="/albums">חזרה לאלבומים</Link>
   ) : (
-    <Link to="/">לדף הבית</Link>
+    <Link className="back-link" to="/">לדף הבית</Link>
   );
 }
 

@@ -31,7 +31,7 @@ function UploadProgress({ items, phase, skippedCount, onClose }: UploadProgressP
         <div className="upload-progress" role="status">
             <div className="upload-progress-header">
                 <strong>{isUploading ? "מעלה תמונות" : "ההעלאה הסתיימה"}</strong>
-                <button type="button" aria-label="מזעור" onClick={() => setIsMinimized(true)}>
+                <button className="upload-progress__minimize" type="button" aria-label="מזעור" onClick={() => setIsMinimized(true)}>
                     _
                 </button>
             </div>
@@ -47,7 +47,7 @@ function UploadProgress({ items, phase, skippedCount, onClose }: UploadProgressP
                     {totalSkipped > 0 && <p>דולגו {totalSkipped} כפולות</p>}
                     {failedCount > 0 && (  <p>נכשלו {failedCount}. אפשר לבחור שוב את אותן תמונות, ואלה שכבר הועלו ידולגו.</p>
                     )}
-                    <button type="button" onClick={onClose}>סגור</button>
+                    <button className="btn btn-secondary" type="button" onClick={onClose}>סגור</button>
                 </>
             )}
         </div>

@@ -11,8 +11,8 @@ function MyAlbumsPage() {
     queryFn: albumService.getAlbums,
   });
 
-  if (albumsQuery.isPending) return <p>טוען אלבומים...</p>;
-  if (albumsQuery.isError) return <p>{albumsQuery.error.message}</p>;
+  if (albumsQuery.isPending) return <p className="page-status">טוען אלבומים...</p>;
+  if (albumsQuery.isError) return <p className="page-status page-status--error">{albumsQuery.error.message}</p>;
 
   const term = search.trim().toLowerCase();
   const albums = [...albumsQuery.data.owned, ...albumsQuery.data.shared]
@@ -21,7 +21,7 @@ function MyAlbumsPage() {
 
   return (
     <>
-      <h1>האלבומים שלי</h1>
+      <h1 className="page-title">האלבומים שלי</h1>
       <AlbumSearch value={search} onChange={setSearch} />
       {term && albums.length === 0 && (
         <p className="album-search-empty">לא נמצאו אלבומים עבור "{search.trim()}"</p>

@@ -34,10 +34,10 @@ export default function RegisterForm() {
 <FormField label="סיסמה" id="password" error={errors.password?.message}>
     <input id="password" type="password" autoComplete="new-password" {...register("password")} />
 </FormField>
-            <button type="submit" disabled={registerMutation.isPending}>
+            <button className="btn btn-primary form-submit" type="submit" disabled={registerMutation.isPending}>
                 {registerMutation.isPending ? "נרשם..." : "הרשמה"}
             </button>
-            {registerMutation.isError && <p>{registerMutation.error.message}</p>}
+            {registerMutation.isError && <p className="form-error">{registerMutation.error.message}</p>}
 
         </form>
     );

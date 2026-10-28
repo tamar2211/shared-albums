@@ -49,20 +49,20 @@ export default function AlbumForm({ submitLabel, defaultValues, onSubmit, isPend
                 </select>
             </FormField>
 
-            <label>
+            <label className="switch-row">
                 <input type="checkbox" {...register("allowUpload")} />
                 משתתפים יכולים להעלות תמונות
             </label>
 
-            <label>
+            <label className="switch-row">
                 <input type="checkbox" {...register("allowDownload")} />
                 משתתפים יכולים להוריד תמונות
             </label>
 
-            <button type="submit" disabled={isPending}>
+            <button className="btn btn-primary form-submit" type="submit" disabled={isPending}>
                 {isPending ? "שומר..." : submitLabel}
             </button>
-            {errorMessage && <p>{errorMessage}</p>}
+            {errorMessage && <p className="form-error">{errorMessage}</p>}
         </form>
     );
 }

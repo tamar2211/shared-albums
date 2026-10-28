@@ -9,8 +9,8 @@ function AuthPage() {
 
   return (
     <>
-      <p>דף התחברות והרשמה</p>
-      <Link to="/">חזרה לדף הבית</Link>
+      <h1 className="page-title">ברוכים הבאים ל-pixx</h1>
+      <Link className="back-link" to="/">חזרה לדף הבית</Link>
 
       <div className="auth-toggle">
         <button
@@ -31,7 +31,7 @@ function AuthPage() {
 
       {isLogin ? <LoginForm /> : <RegisterForm />}
 
-      <p>
+      <p className="auth-switch">
         {isLogin ? "אין לך חשבון? " : "כבר יש לך חשבון? "}
         <button
           type="button"

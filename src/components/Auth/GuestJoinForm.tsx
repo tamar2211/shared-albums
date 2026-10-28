@@ -19,7 +19,7 @@ export default function GuestJoinForm({ onSubmit, isPending }: GuestJoinFormProp
             <FormField label="שם לתצוגה" id="name" error={errors.name?.message}>
                 <input id="name"  {...register("name")} />
             </FormField>
-        <button type="submit" disabled={isPending}>{isPending ? "מצטרף..." : "הצטרפות"}</button>
+        <button className="btn btn-primary form-submit" type="submit" disabled={isPending}>{isPending ? "מצטרף..." : "הצטרפות"}</button>
         </form>
     )
 }

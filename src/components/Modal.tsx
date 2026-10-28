@@ -24,7 +24,7 @@ function Modal({ open, onClose, title, children }: ModalProps) {
         >
             <div className="modal-header">
                 <h2>{title}</h2>
-                <button type="button" aria-label="סגירה" onClick={onClose}>
+                <button className="modal-close" type="button" aria-label="סגירה" onClick={onClose}>
                     ✕
                 </button>
             </div>

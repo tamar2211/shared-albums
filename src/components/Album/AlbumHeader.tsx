@@ -20,13 +20,13 @@ function AlbumHeader({ album, onManage }: AlbumHeaderProps) {
                 {album.eventDate && (
                     <span>{new Date(album.eventDate).toLocaleDateString("he-IL")}</span>
                 )}
-                <span>{album.participantCount} משתתפים</span>
-                <span>{album.photoCount} תמונות</span>
-                <span>נפתח על ידי {album.ownerName}</span>
+                <span title="משתתפים" aria-label={`${album.participantCount} משתתפים`}>{album.participantCount}</span>
+                <span title="תמונות" aria-label={`${album.photoCount} תמונות`}>{album.photoCount}</span>
+                <span title="פתח את האלבום">{album.ownerName}</span>
             </p>
 
             {album.role === "owner" && (
-                <button type="button" onClick={onManage}>
+                <button className="album-manage" type="button" onClick={onManage}>
                     ניהול אלבום
                 </button>
             )}

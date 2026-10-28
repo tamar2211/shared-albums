@@ -15,7 +15,7 @@ function UploadReview({ items, onRemove, onCancel, onUpload }: UploadReviewProps
     const isChecking = items.some((item) => item.status === "checking");
 
     return (
-        <div>
+        <div className="upload-review">
             {isChecking && (
                 <div className="review-progress">
                     <p>בודק תמונות: {checkedCount} מתוך {items.length}</p>
@@ -35,7 +35,7 @@ function UploadReview({ items, onRemove, onCancel, onUpload }: UploadReviewProps
                         {item.status === "error" && (
                             <span className="review-badge">{item.error}</span>
                         )}
-                        <button type="button" aria-label="הסרה" onClick={() => onRemove(item.id)}>
+                        <button className="review-remove" type="button" aria-label="הסרה" onClick={() => onRemove(item.id)}>
                             ✕
                         </button>
                     </li>
@@ -43,9 +43,9 @@ function UploadReview({ items, onRemove, onCancel, onUpload }: UploadReviewProps
             </ul>
 
             <div className="review-footer">
-                <p>{readyCount} תמונות יועלו, {duplicateCount} כפולות ידולגו</p>
-                <button type="button" onClick={onCancel}>ביטול</button>
-                <button type="button" onClick={onUpload} disabled={isChecking || readyCount === 0}>
+                <p className="review-summary">{readyCount} תמונות יועלו, {duplicateCount} כפולות ידולגו</p>
+                <button className="btn btn-secondary" type="button" onClick={onCancel}>ביטול</button>
+                <button className="btn btn-primary" type="button" onClick={onUpload} disabled={isChecking || readyCount === 0}>
                     העלה
                 </button>
             </div>

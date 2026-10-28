@@ -10,10 +10,10 @@ type FormFieldProps = {
 
 function  FormField({label,id,error,children}:FormFieldProps){
     return(
-    <div>
+    <div className="field">
      <label htmlFor={id}>{label}</label>
       {children}
-      {error && <p>{error}</p>}
+      {error && <p className="field-error">{error}</p>}
     </div>
     )
 }

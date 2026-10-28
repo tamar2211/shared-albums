@@ -41,11 +41,11 @@ function PhotoUpload({ albumId }: PhotoUploadProps) {
                 onClose={() => blocker.reset?.()}
                 title="ההעלאה עדיין מתבצעת"
             >
-                <p>יציאה מהעמוד תמנע מעקב אחר ההתקדמות וניסיון חוזר לקבצים שנכשלו.</p>
-                <button type="button" onClick={() => blocker.reset?.()}>
+                <p className="confirm-text">יציאה מהעמוד תמנע מעקב אחר ההתקדמות וניסיון חוזר לקבצים שנכשלו.</p>
+                <button className="btn btn-primary" type="button" onClick={() => blocker.reset?.()}>
                     להישאר
                 </button>
-                <button type="button" onClick={() => blocker.proceed?.()}>
+                <button className="btn btn-secondary" type="button" onClick={() => blocker.proceed?.()}>
                     לצאת בכל זאת
                 </button>
             </Modal>

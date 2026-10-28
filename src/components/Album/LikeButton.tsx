@@ -27,7 +27,7 @@ function LikeButton({ photo }:LikeButtonProps ) {
      return (
        <button
            type="button"
-           className="like-button"
+           className={photo.likedByMe ? "like-button is-liked" : "like-button"}
            onClick={() => saveMutation.mutate()}
            disabled={saveMutation.isPending}
        >
